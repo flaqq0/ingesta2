@@ -9,7 +9,7 @@ from decimal import Decimal  # Importar Decimal para DynamoDB
 fake = Faker()
 
 # Lista de tenants
-tenants = "plazavea" #, "uwu", "wong"]
+tenants = ["plazavea", "uwu", "wong"]
 
 # Salida
 output_file_inventories = "inventarios.json"
