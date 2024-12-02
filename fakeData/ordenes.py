@@ -62,7 +62,7 @@ if not usuarios or not inventarios or not productos:
     print("No hay datos suficientes en DynamoDB para generar órdenes.")
     exit(1)
 
-# Crear mapeo de productos por inventario
+# Crear mapeo de inventarios a productos
 inventory_product_map = {}
 for inv in inventarios:
     tenant_id = inv["tenant_id"]
@@ -93,32 +93,24 @@ for _ in range(TOTAL_ORDERS):
         continue
 
     try:
-        # Seleccionar un inventory_id aleatorio
-        inventory_id = random.choice(list(tenant_inventories.keys()))
-        valid_products = tenant_inventories[inventory_id]
+        # Seleccionar aleatoriamente entre 1 y 3 inventarios
+        selected_inventory_ids = random.sample(list(tenant_inventories.keys()), k=random.randint(1, min(3, len(tenant_inventories))))
+        selected_products = []
 
-        # Filtrar productos válidos en la tabla pf_productos
-        productos_validos = [
-            prod for prod in productos
-            if prod["product_id"] in valid_products and prod["tenant_id"] == tenant_id
-        ]
+        # Agregar productos de cada inventario seleccionado
+        for inventory_id in selected_inventory_ids:
+            valid_products = [
+                prod for prod in productos
+                if prod["product_id"] in tenant_inventories[inventory_id] and prod["tenant_id"] == tenant_id
+            ]
+            if valid_products:
+                # Seleccionar entre 1 y 3 productos de este inventario
+                selected_products += random.sample(valid_products, k=random.randint(1, min(3, len(valid_products))))
 
-        # Seleccionar productos únicos (de 1 a 3 productos aleatorios)
-        max_products_to_select = min(len(productos_validos), 3)  # Asegurarse de no seleccionar más productos de los disponibles
-        if max_products_to_select == 0:
-            print(f"Saltando inventario {inventory_id}: No hay productos válidos para tenant_id {tenant_id}")
-            continue  # Saltar si no hay productos disponibles
-
-        selected_products = random.sample(productos_validos, k=random.randint(1, max_products_to_select))
-        product_list = [
-            {
-                "product_id": producto["product_id"],
-                "quantity": random.randint(1, 5),  # Cantidad aleatoria entre 1 y 5
-                "product_price": Decimal(str(producto["product_price"])),  # Obtener precio real
-            }
-            for producto in selected_products
-        ]
-
+        # Validar si hay productos seleccionados
+        if not selected_products:
+            print(f"Saltando orden para usuario {user_id}: No se seleccionaron productos válidos.")
+            continue
 
         # Generar un order_id único
         while True:
@@ -130,6 +122,16 @@ for _ in range(TOTAL_ORDERS):
         # Generar datos para la orden
         creation_date = generate_creation_date()
         shipping_date = (datetime.fromisoformat(creation_date) + timedelta(days=7)).isoformat()
+
+        # Crear lista de productos
+        product_list = [
+            {
+                "product_id": producto["product_id"],
+                "quantity": random.randint(1, 5),  # Cantidad aleatoria entre 1 y 5
+                "product_price": Decimal(str(producto["product_price"])),  # Obtener precio real
+            }
+            for producto in selected_products
+        ]
 
         # Calcular el precio total
         total_price = sum(
@@ -143,7 +145,7 @@ for _ in range(TOTAL_ORDERS):
             "tu_id": f"{tenant_id}#{user_id}",
             "user_id": user_id,
             "user_info": user_info,
-            "inventory_ids": [inventory_id],  # Lista con el inventory_id seleccionado
+            "inventory_ids": selected_inventory_ids,  # Lista de todos los inventory_id usados
             "creation_date": creation_date,
             "shipping_date": shipping_date,
             "order_status": "PENDING",
