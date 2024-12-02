@@ -62,10 +62,17 @@ if not usuarios or not inventarios or not productos:
     print("No hay datos suficientes en DynamoDB para generar órdenes.")
     exit(1)
 
-# Crear mapeo de product_id a inventarios válidos
-product_inventory_map = {}
+# Crear mapeo de productos por inventario
+inventory_product_map = {}
 for inv in inventarios:
-    product_inventory_map[inv["product_id"]] = inv["inventory_id"]
+    tenant_id = inv["tenant_id"]
+    product_id = inv["product_id"]
+    inventory_id = inv["inventory_id"]
+    if tenant_id not in inventory_product_map:
+        inventory_product_map[tenant_id] = {}
+    if inventory_id not in inventory_product_map[tenant_id]:
+        inventory_product_map[tenant_id][inventory_id] = []
+    inventory_product_map[tenant_id][inventory_id].append(product_id)
 
 # Generar exactamente 20 órdenes
 generated_orders = []
@@ -78,19 +85,30 @@ for _ in range(TOTAL_ORDERS):
     user_id = usuario["user_id"]
     user_info = generate_user_info()
 
-    # Filtrar productos y validarlos en inventarios
-    productos_filtrados = [
-        prod for prod in productos
-        if prod["tenant_id"] == tenant_id and prod["product_id"] in product_inventory_map
-    ]
+    # Obtener inventarios válidos para el tenant_id del usuario
+    tenant_inventories = inventory_product_map.get(tenant_id, {})
 
-    if not productos_filtrados:
-        print(f"Saltando usuario {user_id}: No hay productos disponibles para tenant_id {tenant_id}")
+    if not tenant_inventories:
+        print(f"Saltando usuario {user_id}: No hay inventarios válidos para tenant_id {tenant_id}")
         continue
 
     try:
+        # Seleccionar un inventory_id aleatorio
+        inventory_id = random.choice(list(tenant_inventories.keys()))
+        valid_products = tenant_inventories[inventory_id]
+
+        # Filtrar productos válidos en la tabla pf_productos
+        productos_validos = [
+            prod for prod in productos
+            if prod["product_id"] in valid_products and prod["tenant_id"] == tenant_id
+        ]
+
+        if not productos_validos:
+            print(f"Saltando inventario {inventory_id}: No hay productos válidos para tenant_id {tenant_id}")
+            continue
+
         # Seleccionar productos únicos (de 1 a 3 productos aleatorios)
-        selected_products = random.sample(productos_filtrados, k=random.randint(1, 3))
+        selected_products = random.sample(productos_validos, k=random.randint(1, 3))
         product_list = [
             {
                 "product_id": producto["product_id"],
@@ -99,11 +117,6 @@ for _ in range(TOTAL_ORDERS):
             }
             for producto in selected_products
         ]
-
-        # Obtener los inventory_id correspondientes y garantizar que siempre sea una lista
-        inventory_ids = list({product_inventory_map[prod["product_id"]] for prod in product_list})
-        if len(inventory_ids) == 1:  # Si solo hay un inventario, mantenerlo como lista
-            inventory_ids = [inventory_ids[0]]
 
         # Generar un order_id único
         while True:
@@ -128,7 +141,7 @@ for _ in range(TOTAL_ORDERS):
             "tu_id": f"{tenant_id}#{user_id}",
             "user_id": user_id,
             "user_info": user_info,
-            "inventory_ids": inventory_ids,  # Lista de inventory_ids
+            "inventory_ids": [inventory_id],  # Lista con el inventory_id seleccionado
             "creation_date": creation_date,
             "shipping_date": shipping_date,
             "order_status": "PENDING",
