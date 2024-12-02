@@ -19,7 +19,7 @@ inventory_table = dynamodb.Table("pf_inventario")
 products_table = dynamodb.Table("pf_productos")
 users_table = dynamodb.Table("pf_usuarios")
 
-output_file_orders = "pagos.json"
+output_file_orders = "ordenes.json"
 
 # Parámetro global para limitar órdenes
 TOTAL_ORDERS = 20  # Cambia este valor para ajustar el número total de órdenes
