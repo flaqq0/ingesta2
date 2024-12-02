@@ -22,7 +22,7 @@ users_table = dynamodb.Table("pf_usuarios")
 output_file_orders = "ordenes.json"
 
 # Parámetro global para limitar órdenes
-TOTAL_ORDERS = 20
+TOTAL_ORDERS = 15000
 
 # Obtener todos los registros de una tabla DynamoDB
 def get_all_items(table):
@@ -94,7 +94,7 @@ for _ in range(TOTAL_ORDERS):
 
     try:
         # Seleccionar aleatoriamente entre 1 y 3 inventarios
-        selected_inventory_ids = random.sample(list(tenant_inventories.keys()), k=random.randint(1, min(3, len(tenant_inventories))))
+        selected_inventory_ids = random.sample(list(tenant_inventories.keys()), k=random.randint(1, min(5, len(tenant_inventories))))
         selected_products = []
 
         # Agregar productos de cada inventario seleccionado
