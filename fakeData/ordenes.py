@@ -109,7 +109,14 @@ def generate_orders(users):
 
         # Generar IDs y fechas
         order_id = f"order_{random.randint(1000, 99999)}"
-        creation_date = datetime.now()
+
+        # Fecha aleatoria de este año
+        start_of_year = datetime(datetime.now().year, 1, 1)
+        days_passed = (datetime.now() - start_of_year).days
+        random_days = random.randint(0, days_passed)
+        creation_date = start_of_year + timedelta(days=random_days)
+
+        # Fecha de envío: 7 días después de la fecha de creación
         shipping_date = creation_date + timedelta(days=7)
 
         # Crear la orden
