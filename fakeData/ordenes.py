@@ -16,6 +16,7 @@ dynamodb = boto3.resource("dynamodb", region_name=region_name)
 # Tablas DynamoDB
 orders_table = dynamodb.Table("pf_ordenes")
 inventory_table = dynamodb.Table("pf_inventario")
+products_table = dynamodb.Table("pf_productos")
 users_table = dynamodb.Table("pf_usuarios")
 
 output_file_orders = "ordenes.json"
@@ -51,12 +52,13 @@ def generate_creation_date():
     random_days = random.randint(0, 364)  # Excluye hoy
     return (start_date + timedelta(days=random_days)).isoformat()
 
-# Obtener inventarios y usuarios existentes
+# Obtener inventarios, productos y usuarios existentes
 inventarios = get_all_items(inventory_table)
+productos = get_all_items(products_table)
 usuarios = get_all_items(users_table)
 
 # Validación de datos
-if not usuarios or not inventarios:
+if not usuarios or not inventarios or not productos:
     print("No hay datos suficientes en DynamoDB para generar órdenes.")
     exit(1)
 
@@ -77,20 +79,26 @@ for _ in range(TOTAL_ORDERS):
         print(f"Saltando usuario {user_id}: No hay inventarios válidos para tenant_id {tenant_id}")
         continue
 
-    try:
-        # Seleccionar productos desde los inventarios
-        product_inventory_map = {}  # Mapeo de product_id a inventory_id
-        for inventario in inventarios_filtrados:
-            product_inventory_map[inventario["product_id"]] = inventario["inventory_id"]
+    # Crear mapeo de product_id a inventory_id
+    product_inventory_map = {inv["product_id"]: inv["inventory_id"] for inv in inventarios_filtrados}
 
+    # Filtrar productos disponibles en inventarios válidos
+    productos_filtrados = [prod for prod in productos if prod["product_id"] in product_inventory_map]
+
+    if not productos_filtrados:
+        print(f"Saltando usuario {user_id}: No hay productos disponibles para tenant_id {tenant_id}")
+        continue
+
+    try:
         # Seleccionar productos únicos (de 1 a 3 productos aleatorios)
-        selected_products = random.sample(list(product_inventory_map.keys()), k=random.randint(1, 3))
+        selected_products = random.sample(productos_filtrados, k=random.randint(1, 3))
         product_list = [
             {
-                "product_id": product_id,
+                "product_id": producto["product_id"],
                 "quantity": random.randint(1, 5),  # Cantidad aleatoria entre 1 y 5
+                "product_price": Decimal(str(producto["product_price"])),  # Obtener precio real
             }
-            for product_id in selected_products
+            for producto in selected_products
         ]
 
         # Obtener los inventory_id correspondientes
@@ -109,7 +117,7 @@ for _ in range(TOTAL_ORDERS):
 
         # Calcular el precio total
         total_price = sum(
-            Decimal("10.0") * Decimal(product["quantity"])  # Precio fijo para simplificar
+            product["product_price"] * Decimal(product["quantity"])
             for product in product_list
         )
 
