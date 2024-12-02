@@ -103,12 +103,13 @@ for _ in range(TOTAL_ORDERS):
             if prod["product_id"] in valid_products and prod["tenant_id"] == tenant_id
         ]
 
-        if not productos_validos:
-            print(f"Saltando inventario {inventory_id}: No hay productos válidos para tenant_id {tenant_id}")
-            continue
-
         # Seleccionar productos únicos (de 1 a 3 productos aleatorios)
-        selected_products = random.sample(productos_validos, k=random.randint(1, 3))
+        max_products_to_select = min(len(productos_validos), 3)  # Asegurarse de no seleccionar más productos de los disponibles
+        if max_products_to_select == 0:
+            print(f"Saltando inventario {inventory_id}: No hay productos válidos para tenant_id {tenant_id}")
+            continue  # Saltar si no hay productos disponibles
+
+        selected_products = random.sample(productos_validos, k=random.randint(1, max_products_to_select))
         product_list = [
             {
                 "product_id": producto["product_id"],
@@ -117,6 +118,7 @@ for _ in range(TOTAL_ORDERS):
             }
             for producto in selected_products
         ]
+
 
         # Generar un order_id único
         while True:
