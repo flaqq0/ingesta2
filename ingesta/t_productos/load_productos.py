@@ -61,7 +61,7 @@ def ingest():
         logger.warning(f"No se encontró el archivo 'pf_productos.json' en '{BASE_DIRECTORY}'. Nada para subir.")
         return
     
-    file_size = os.path.getsize(file_path) / 1024  # Tamaño en KB
+    file_size = os.path.getsize(file_path) / 1024 
     logger.info(f"Archivo '{file_path}' encontrado. Tamaño: {file_size:.2f} KB.")
 
     s3_file_path = "productos/pf_productos.json"
