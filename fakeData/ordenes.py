@@ -64,6 +64,26 @@ def generate_user_info():
         "codigo_postal": fake.postcode(),
     }
 
+# Incrementar el stock en el inventario
+def update_inventory_stock(tenant_id, inventory_id, product_id, quantity):
+    try:
+        response = table_inventario.get_item(Key={"tenant_id": tenant_id, "ip_id": f"{inventory_id}#{product_id}"})
+        if "Item" not in response:
+            print(f"Advertencia: Producto {product_id} no encontrado en el inventario {inventory_id}")
+            return
+
+        current_stock = response["Item"].get("stock", 0)
+        new_stock = current_stock + quantity
+
+        table_inventario.update_item(
+            Key={"tenant_id": tenant_id, "ip_id": f"{inventory_id}#{product_id}"},
+            UpdateExpression="SET stock = :new_stock",
+            ExpressionAttributeValues={":new_stock": new_stock},
+        )
+        print(f"Stock actualizado para {product_id} en inventario {inventory_id}: {new_stock}")
+    except ClientError as e:
+        print(f"Error al actualizar el stock de {product_id}: {e.response['Error']['Message']}")
+
 # Generar órdenes
 def generate_orders(users, inventory):
     orders = []
@@ -75,20 +95,29 @@ def generate_orders(users, inventory):
         user_id = user["user_id"]
         user_info = generate_user_info()
 
+        # Filtrar productos del mismo tenant_id
+        tenant_inventory = [item for item in inventory if item["tenant_id"] == tenant_id]
+        if not tenant_inventory:
+            print(f"No hay productos disponibles para el tenant {tenant_id}")
+            continue
+
         # Seleccionar productos aleatorios del inventario
-        inventory_items = random.sample(inventory, k=random.randint(1, 5))  # Seleccionar entre 1 y 5 productos
+        inventory_items = random.sample(tenant_inventory, k=random.randint(1, 5))  # Seleccionar entre 1 y 5 productos
         product_list = []
         total_price = Decimal(0)
 
         for item in inventory_items:
             product_id = item["product_id"]
             inventory_id = item["inventory_id"]
-            stock = item.get("stock", 10)  # Stock predeterminado si no está presente
-            quantity = random.randint(1, min(stock, 5))  # Cantidad de producto menor o igual al stock disponible
+            stock = item.get("stock", 0)
+            quantity = random.randint(1, 5)  # Cantidad aleatoria para ingresar al stock
 
             # Obtener el precio del producto desde `pf_productos`
             price = get_product_price(tenant_id, product_id)
             total_price += price * quantity
+
+            # Actualizar el stock (incremento)
+            update_inventory_stock(tenant_id, inventory_id, product_id, quantity)
 
             # Agregar producto a la lista
             product_list.append({"product_id": product_id, "quantity": quantity})
