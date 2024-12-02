@@ -5,34 +5,32 @@ import boto3
 from botocore.exceptions import ClientError
 
 # Conexión a DynamoDB
-region_name = "us-east-1"  # Cambia esta región según tu configuración
+region_name = "us-east-1"
 dynamodb = boto3.resource("dynamodb", region_name=region_name)
 table_inventarios = dynamodb.Table("pf_inventarios")
 table_productos = dynamodb.Table("pf_productos")
 table_inventario_productos = dynamodb.Table("pf_inventario")  # Tabla para la relación inventario-producto
 
 # Lista de tenants
-tenants = ["plazavea"]
+tenants = ["plazavea"]  # ["wong", "uwu"]
 
 # Salida
 output_file_inventory_products = "inventario_productos.json"
 
-# Obtener todos los `inventory_id` existentes
+# Obtener todos los inventarios existentes
 def get_existing_inventories():
     try:
         response = table_inventarios.scan()
-        inventories = response.get("Items", [])
-        return inventories
+        return response.get("Items", [])
     except ClientError as e:
         print(f"Error al obtener inventarios: {e.response['Error']['Message']}")
         return []
 
-# Obtener todos los `product_id` existentes
+# Obtener todos los productos existentes
 def get_existing_products():
     try:
         response = table_productos.scan()
-        products = response.get("Items", [])
-        return products
+        return response.get("Items", [])
     except ClientError as e:
         print(f"Error al obtener productos: {e.response['Error']['Message']}")
         return []
@@ -44,35 +42,42 @@ def generate_stock(max_stock):
     return random.randint(1, max_stock)
 
 # Generar fake data para productos en inventarios
-def generate_inventory_products(inventories, products, target_count=10):
+def generate_inventory_products(inventories, products, num_relations=10):
     inventory_products = []
 
-    for _ in range(target_count):
+    for inventory in inventories:
+        tenant_id = inventory["tenant_id"]
+        inventory_id = inventory["inventory_id"]
+        inventory_stock = inventory.get("stock", 1000)  # Valor predeterminado si no existe stock
+
+        # Filtrar productos por el mismo tenant_id
+        tenant_products = [product for product in products if product["tenant_id"] == tenant_id]
+        if not tenant_products:
+            print(f"No se encontraron productos para el tenant {tenant_id}.")
+            continue
+
+        # Seleccionar un número definido de productos (num_relations)
+        selected_products = []
         attempts = 0
-        max_attempts = 100  # Evitar bucles infinitos
-        while attempts < max_attempts:
+        while len(selected_products) < num_relations and attempts < len(tenant_products) * 2:
+            product = random.choice(tenant_products)
+            if product not in selected_products:
+                selected_products.append(product)
             attempts += 1
 
-            # Seleccionar un tenant aleatorio
-            tenant_id = random.choice(tenants)
-
-            # Filtrar inventarios y productos del tenant
-            tenant_inventories = [inv for inv in inventories if inv["tenant_id"] == tenant_id]
-            tenant_products = [prod for prod in products if prod["tenant_id"] == tenant_id]
-
-            if not tenant_inventories or not tenant_products:
-                continue  # Si no hay datos, repetir
-
-            # Seleccionar inventario y producto
-            inventory = random.choice(tenant_inventories)
-            product = random.choice(tenant_products)
-
-            inventory_id = inventory["inventory_id"]
+        for product in selected_products:
             product_id = product["product_id"]
-            ip_id = f"{inventory_id}#{product_id}"
-            stock = generate_stock(inventory.get("stock", 1000))
 
-            # Crear registro
+            # Generar ip_id
+            ip_id = f"{inventory_id}#{product_id}"
+
+            # Generar stock para el producto
+            stock = generate_stock(inventory_stock)
+
+            # Observaciones aleatorias
+            observaciones = f"Stock asignado para el inventario {inventory_id}"
+
+            # Crear el registro
             inventory_product = {
                 "tenant_id": tenant_id,
                 "ip_id": ip_id,
@@ -80,7 +85,7 @@ def generate_inventory_products(inventories, products, target_count=10):
                 "product_id": product_id,
                 "stock": stock,
                 "last_modification": datetime.now().isoformat(),
-                "observaciones": f"Stock asignado para el inventario {inventory_id}",
+                "observaciones": observaciones,
             }
 
             inventory_products.append(inventory_product)
@@ -91,11 +96,7 @@ def generate_inventory_products(inventories, products, target_count=10):
             except ClientError as e:
                 print(f"Error al agregar inventario-producto {ip_id}: {e.response['Error']['Message']}")
 
-            # Salir del bucle si se encontró un producto válido
-            break
-
     return inventory_products
-
 
 # Función principal
 def main():
@@ -108,7 +109,7 @@ def main():
         return
 
     # Generar fake data
-    inventory_products = generate_inventory_products(inventories, products)
+    inventory_products = generate_inventory_products(inventories, products, num_relations=10)
 
     # Guardar en inventario_productos.json
     with open(output_file_inventory_products, "w", encoding="utf-8") as outfile:
