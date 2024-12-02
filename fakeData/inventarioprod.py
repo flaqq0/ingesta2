@@ -50,7 +50,7 @@ def generate_inventory_products(inventories, products):
 
     for _ in range(4000):  # Generar 500 registros
         # Seleccionar un tenant aleatoriamente
-        tenant_id = random.choice(tenants)
+        tenant_id = tenants
 
         # Seleccionar un inventario existente
         inventory = random.choice(inventories)
