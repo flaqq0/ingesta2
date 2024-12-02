@@ -11,7 +11,6 @@ region_name = "us-east-1"
 dynamodb = boto3.resource("dynamodb", region_name=region_name)
 table_usuarios = dynamodb.Table("pf_usuarios")
 table_inventario = dynamodb.Table("pf_inventario")
-table_productos = dynamodb.Table("pf_productos")
 table_ordenes = dynamodb.Table("pf_ordenes")
 
 # Inicializar Faker (direcciones internacionales)
@@ -33,37 +32,16 @@ def get_existing_users():
         return []
 
 # Obtener productos cruzados con inventario
-def get_products_with_inventory(tenant_id):
+def get_products_from_inventory(tenant_id):
     try:
-        # Obtener inventarios del tenant
-        inventory_response = table_inventario.scan(
+        response_inventory = table_inventario.scan(
             FilterExpression="tenant_id = :tenant_id",
             ExpressionAttributeValues={":tenant_id": tenant_id}
         )
-        inventory_items = inventory_response.get("Items", [])
-
-        # Obtener productos del tenant
-        products_response = table_productos.scan(
-            FilterExpression="tenant_id = :tenant_id",
-            ExpressionAttributeValues={":tenant_id": tenant_id}
-        )
-        product_items = products_response.get("Items", [])
-
-        # Cruzar productos con inventarios
-        products_with_inventory = []
-        for inventory in inventory_items:
-            for product in product_items:
-                if product["product_id"] == inventory["product_id"]:
-                    products_with_inventory.append({
-                        "tenant_id": tenant_id,
-                        "product_id": product["product_id"],
-                        "inventory_id": inventory["inventory_id"],
-                        "product_price": Decimal(str(product["product_price"])),
-                        "product_name": product["product_name"]
-                    })
-        return products_with_inventory
+        inventory_items = response_inventory.get("Items", [])
+        return inventory_items
     except ClientError as e:
-        print(f"Error al cruzar productos e inventarios para tenant {tenant_id}: {e.response['Error']['Message']}")
+        print(f"Error al obtener productos de inventario para tenant {tenant_id}: {e.response['Error']['Message']}")
         return []
 
 # Generar información de usuario (direcciones internacionales)
@@ -78,7 +56,7 @@ def generate_user_info():
 # Generar órdenes
 def generate_orders(users):
     orders = []
-    for _ in range(100):  # Generar 100 órdenes
+    for _ in range(50):  # Generar 100 órdenes
         tenant_id = random.choice(tenants)
 
         # Seleccionar un usuario existente
@@ -87,24 +65,21 @@ def generate_orders(users):
         user_info = generate_user_info()
 
         # Obtener productos del tenant
-        products_with_inventory = get_products_with_inventory(tenant_id)
-        if not products_with_inventory:
-            print(f"Advertencia: No se encontraron productos para el tenant {tenant_id}.")
+        inventory_items = get_products_from_inventory(tenant_id)
+        if not inventory_items:
             continue
 
         # Seleccionar productos aleatorios
-        selected_products = random.sample(products_with_inventory, k=random.randint(1, 5))  # Entre 1 y 5 productos
+        selected_products = random.sample(inventory_items, k=random.randint(1, 5))  # Entre 1 y 5 productos
         product_list = []
         total_price = Decimal(0)
 
         for product in selected_products:
             quantity = random.randint(1, 5)  # Cantidad aleatoria entre 1 y 5
-            total_price += product["product_price"] * quantity
-
             product_list.append({
                 "product_id": product["product_id"],
                 "quantity": quantity,
-                "product_name": product["product_name"]
+                "inventory_id": product["inventory_id"],
             })
 
         # Generar IDs y fechas
