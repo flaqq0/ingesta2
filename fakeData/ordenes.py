@@ -67,63 +67,72 @@ generated_orders = []
 generated_order_ids = set()
 
 for _ in range(TOTAL_ORDERS):
-    # Seleccionar usuario, inventario y productos aleatoriamente
+    # Seleccionar usuario aleatorio
     usuario = random.choice(usuarios)
     tenant_id = usuario["tenant_id"]
     user_id = usuario["user_id"]
     user_info = generate_user_info()
 
+    # Filtrar inventarios y productos que coincidan con el tenant_id del usuario
     inventarios_filtrados = [inv for inv in inventarios if inv["tenant_id"] == tenant_id]
-    productos_filtrados = [prod for prod in productos if prod["tenant_id"] == tenant_id]
-
-    if not inventarios_filtrados or not productos_filtrados:
-        print(f"Saltando usuario {user_id}: No hay inventarios o productos válidos para tenant_id {tenant_id}")
+    if not inventarios_filtrados:
+        print(f"Saltando usuario {user_id}: No hay inventarios válidos para tenant_id {tenant_id}")
         continue
 
-    inventario = random.choice(inventarios_filtrados)
-    product_list = [
-        {
-            "product_id": producto["product_id"],
-            "quantity": random.randint(1, 5),  # Cantidad aleatoria entre 1 y 5
-        }
-        for producto in random.sample(productos_filtrados, k=random.randint(1, 3))  # Seleccionar 1 a 3 productos
+    productos_disponibles = [
+        prod for prod in productos
+        if any(inv["product_id"] == prod["product_id"] for inv in inventarios_filtrados)
     ]
-
-    # Generar un order_id único
-    while True:
-        order_id = f"order_{random.randint(1000, 99999)}"
-        if order_id not in generated_order_ids:
-            generated_order_ids.add(order_id)
-            break
-
-    # Generar datos para la orden
-    creation_date = generate_creation_date()
-    shipping_date = (datetime.fromisoformat(creation_date) + timedelta(days=7)).isoformat()
-
-    total_price = sum(
-        Decimal(str(next(prod["product_price"] for prod in productos_filtrados if prod["product_id"] == product["product_id"])))
-        * Decimal(product["quantity"])
-        for product in product_list
-    )
-
-    order = {
-        "tenant_id": tenant_id,
-        "order_id": order_id,
-        "tu_id": f"{tenant_id}#{user_id}",
-        "user_id": user_id,
-        "user_info": user_info,
-        "inventory_id": inventario["inventory_id"],
-        "creation_date": creation_date,
-        "shipping_date": shipping_date,
-        "order_status": "PENDING",
-        "products": product_list,
-        "total_price": Decimal(str(total_price)),
-    }
+    if not productos_disponibles:
+        print(f"Saltando usuario {user_id}: No hay productos disponibles en el inventario para tenant_id {tenant_id}")
+        continue
 
     try:
+        # Seleccionar un inventario y productos aleatorios
+        inventario = random.choice(inventarios_filtrados)
+        product_list = [
+            {
+                "product_id": producto["product_id"],
+                "quantity": random.randint(1, 5),  # Cantidad aleatoria entre 1 y 5
+            }
+            for producto in random.sample(productos_disponibles, k=random.randint(1, 3))  # Seleccionar 1 a 3 productos
+        ]
+
+        # Generar un order_id único
+        while True:
+            order_id = f"order_{random.randint(1000, 99999)}"
+            if order_id not in generated_order_ids:
+                generated_order_ids.add(order_id)
+                break
+
+        # Generar datos para la orden
+        creation_date = generate_creation_date()
+        shipping_date = (datetime.fromisoformat(creation_date) + timedelta(days=7)).isoformat()
+
+        total_price = sum(
+            Decimal(str(next(prod["product_price"] for prod in productos_disponibles if prod["product_id"] == product["product_id"])))
+            * Decimal(product["quantity"])
+            for product in product_list
+        )
+
+        order = {
+            "tenant_id": tenant_id,
+            "order_id": order_id,
+            "tu_id": f"{tenant_id}#{user_id}",
+            "user_id": user_id,
+            "user_info": user_info,
+            "inventory_id": inventario["inventory_id"],
+            "creation_date": creation_date,
+            "shipping_date": shipping_date,
+            "order_status": "PENDING",
+            "products": product_list,
+            "total_price": Decimal(str(total_price)),
+        }
+
         # Subir orden a DynamoDB
         orders_table.put_item(Item=order)
         generated_orders.append(order)
+
     except ClientError as e:
         print(f"Error al insertar en la tabla pf_ordenes: {e.response['Error']['Message']}")
 
