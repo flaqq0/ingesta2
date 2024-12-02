@@ -101,8 +101,10 @@ for _ in range(TOTAL_ORDERS):
             for producto in selected_products
         ]
 
-        # Obtener los inventory_id correspondientes
+        # Obtener los inventory_id correspondientes y garantizar que siempre sea una lista
         inventory_ids = list({product_inventory_map[prod["product_id"]] for prod in product_list})
+        if len(inventory_ids) == 1:  # Si solo hay un inventario, mantenerlo como lista
+            inventory_ids = [inventory_ids[0]]
 
         # Generar un order_id único
         while True:
@@ -127,7 +129,7 @@ for _ in range(TOTAL_ORDERS):
             "tu_id": f"{tenant_id}#{user_id}",
             "user_id": user_id,
             "user_info": user_info,
-            "inventory_ids": inventory_ids,
+            "inventory_ids": inventory_ids,  # Lista de inventory_ids
             "creation_date": creation_date,
             "shipping_date": shipping_date,
             "order_status": "PENDING",
