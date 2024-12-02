@@ -1,85 +1,112 @@
-import boto3
-import random
 import json
+import random
 from datetime import datetime
-from decimal import Decimal
+import boto3
 from botocore.exceptions import ClientError
 
 # Conexión a DynamoDB
-region_name = "us-east-1"
+region_name = "us-east-1"  # Cambia esta región según tu configuración
 dynamodb = boto3.resource("dynamodb", region_name=region_name)
 table_inventarios = dynamodb.Table("pf_inventarios")
 table_productos = dynamodb.Table("pf_productos")
-table_inventario_prod = dynamodb.Table("pf_inventario")
+table_inventario_productos = dynamodb.Table("pf_inventario")  # Tabla para la relación inventario-producto
+
+# Lista de tenants
+tenants = ["plazavea"]  # ["wong", "uwu"]
 
 # Salida
-output_file = "inventarioprod.json"
+output_file_inventory_products = "inventario_productos.json"
 
-# Obtener inventarios existentes
+# Obtener todos los `inventory_id` existentes
 def get_existing_inventories():
     try:
         response = table_inventarios.scan()
-        return response.get("Items", [])
+        inventories = response.get("Items", [])
+        return inventories
     except ClientError as e:
         print(f"Error al obtener inventarios: {e.response['Error']['Message']}")
         return []
 
-# Obtener productos existentes
+# Obtener todos los `product_id` existentes
 def get_existing_products():
     try:
         response = table_productos.scan()
-        return response.get("Items", [])
+        products = response.get("Items", [])
+        return products
     except ClientError as e:
         print(f"Error al obtener productos: {e.response['Error']['Message']}")
         return []
 
-# Generar relaciones entre inventarios y productos
-def generate_inventory_products(inventories, products):
+# Generar stock aleatorio basado en el stock disponible del inventario principal
+def generate_stock(max_stock):
+    if max_stock <= 1:
+        return 1  # Si el stock máximo es <= 1, devuelve 1
+    return random.randint(1, max_stock)
+
+# Generar fake data para productos en inventarios
+def generate_inventory_products(inventories, products, target_count=10):
     inventory_products = []
-    count = 0  # Contador para limitar a 10 datos
-    for inventory in inventories:
-        tenant_id = inventory["tenant_id"]
-        inventory_id = inventory["inventory_id"]
 
-        # Filtrar productos por el mismo tenant_id
-        tenant_products = [product for product in products if product["tenant_id"] == tenant_id]
-        if not tenant_products:
-            continue  # Si no hay productos para este tenant, pasar al siguiente inventario
+    for _ in range(target_count):  # Intentar generar la cantidad deseada de relaciones
+        while True:
+            # Seleccionar un tenant aleatoriamente
+            tenant_id = random.choice(tenants)
 
-        # Seleccionar productos aleatorios
-        selected_products = random.sample(tenant_products, k=random.randint(1, 5))  # Entre 1 y 5 productos
+            # Filtrar inventarios por tenant_id
+            tenant_inventories = [inventory for inventory in inventories if inventory["tenant_id"] == tenant_id]
+            if not tenant_inventories:
+                continue  # Si no hay inventarios para este tenant, repetir el bucle
 
-        for product in selected_products:
+            # Seleccionar un inventario existente
+            inventory = random.choice(tenant_inventories)
+            inventory_id = inventory["inventory_id"]
+            inventory_stock = inventory.get("stock", 1000)  # Valor predeterminado si no existe stock
+
+            # Filtrar productos por tenant_id
+            tenant_products = [product for product in products if product["tenant_id"] == tenant_id]
+            if not tenant_products:
+                continue  # Si no hay productos para este tenant, repetir el bucle
+
+            # Seleccionar un producto existente
+            product = random.choice(tenant_products)
             product_id = product["product_id"]
-            stock = random.randint(1, 500)  # Generar stock aleatorio
 
-            # Crear relación inventario-producto
+            # Generar ip_id
+            ip_id = f"{inventory_id}#{product_id}"
+
+            # Generar stock para el producto
+            stock = generate_stock(inventory_stock)
+
+            # Observaciones aleatorias
+            observaciones = f"Stock asignado para el inventario {inventory_id}"
+
+            # Crear el registro
             inventory_product = {
                 "tenant_id": tenant_id,
-                "ip_id": f"{inventory_id}#{product_id}",
+                "ip_id": ip_id,
                 "inventory_id": inventory_id,
                 "product_id": product_id,
                 "stock": stock,
-                "last_modification": datetime.utcnow().isoformat(),
-                "observaciones": "Stock asignado automáticamente",
+                "last_modification": datetime.now().isoformat(),
+                "observaciones": observaciones,
             }
+
             inventory_products.append(inventory_product)
 
             # Subir a DynamoDB
             try:
-                table_inventario_prod.put_item(Item=inventory_product)
-                count += 1  # Incrementar contador
-                if count >= 10:  # Detener después de 10 registros
-                    return inventory_products
+                table_inventario_productos.put_item(Item=inventory_product)
             except ClientError as e:
-                print(f"Error al subir inventario-producto {inventory_product['ip_id']}: {e.response['Error']['Message']}")
+                print(f"Error al agregar inventario-producto {ip_id}: {e.response['Error']['Message']}")
+
+            # Salir del bucle interno al encontrar una relación válida
+            break
 
     return inventory_products
 
-
 # Función principal
 def main():
-    # Obtener datos existentes
+    # Obtener inventarios y productos existentes
     inventories = get_existing_inventories()
     products = get_existing_products()
 
@@ -87,14 +114,14 @@ def main():
         print("No se encontraron inventarios o productos existentes.")
         return
 
-    # Generar relaciones inventario-producto
+    # Generar fake data
     inventory_products = generate_inventory_products(inventories, products)
 
-    # Guardar en archivo JSON
-    with open(output_file, "w", encoding="utf-8") as outfile:
-        json.dump(inventory_products, outfile, ensure_ascii=False, indent=4, default=str)
+    # Guardar en inventario_productos.json
+    with open(output_file_inventory_products, "w", encoding="utf-8") as outfile:
+        json.dump(inventory_products, outfile, ensure_ascii=False, indent=4)
 
-    print(f"Archivo '{output_file}' generado con éxito y las relaciones han sido subidas a DynamoDB.")
+    print(f"Archivo '{output_file_inventory_products}' generado con éxito y los registros han sido subidos a DynamoDB.")
 
 # Ejecutar el script
 if __name__ == "__main__":
