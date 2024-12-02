@@ -41,19 +41,17 @@ def get_existing_inventory():
         print(f"Error al obtener inventarios: {e.response['Error']['Message']}")
         return []
 
-# Obtener el precio del producto desde la tabla `pf_productos`
-def get_product_price(tenant_id, product_id):
+# Obtener productos de un tenant específico
+def get_products_by_tenant(tenant_id):
     try:
-        response = table_productos.get_item(Key={"tenant_id": tenant_id, "product_id": product_id})
-        product = response.get("Item")
-        if product and "product_price" in product:
-            return Decimal(str(product["product_price"]))
-        else:
-            print(f"Advertencia: No se encontró precio para el producto {product_id}")
-            return Decimal(0)  # Precio predeterminado si no está presente
+        response = table_productos.scan(
+            FilterExpression="tenant_id = :tenant_id",
+            ExpressionAttributeValues={":tenant_id": tenant_id}
+        )
+        return response.get("Items", [])
     except ClientError as e:
-        print(f"Error al obtener precio del producto {product_id}: {e.response['Error']['Message']}")
-        return Decimal(0)
+        print(f"Error al obtener productos para tenant {tenant_id}: {e.response['Error']['Message']}")
+        return []
 
 # Generar información de usuario (direcciones internacionales)
 def generate_user_info():
@@ -64,28 +62,8 @@ def generate_user_info():
         "codigo_postal": fake.postcode(),
     }
 
-# Incrementar el stock en el inventario
-def update_inventory_stock(tenant_id, inventory_id, product_id, quantity):
-    try:
-        response = table_inventario.get_item(Key={"tenant_id": tenant_id, "ip_id": f"{inventory_id}#{product_id}"})
-        if "Item" not in response:
-            print(f"Advertencia: Producto {product_id} no encontrado en el inventario {inventory_id}")
-            return
-
-        current_stock = response["Item"].get("stock", 0)
-        new_stock = current_stock + quantity
-
-        table_inventario.update_item(
-            Key={"tenant_id": tenant_id, "ip_id": f"{inventory_id}#{product_id}"},
-            UpdateExpression="SET stock = :new_stock",
-            ExpressionAttributeValues={":new_stock": new_stock},
-        )
-        print(f"Stock actualizado para {product_id} en inventario {inventory_id}: {new_stock}")
-    except ClientError as e:
-        print(f"Error al actualizar el stock de {product_id}: {e.response['Error']['Message']}")
-
 # Generar órdenes
-def generate_orders(users, inventory):
+def generate_orders(users):
     orders = []
     for _ in range(100):  # Generar 100 órdenes
         tenant_id = random.choice(tenants)
@@ -95,32 +73,37 @@ def generate_orders(users, inventory):
         user_id = user["user_id"]
         user_info = generate_user_info()
 
-        # Filtrar productos del mismo tenant_id
-        tenant_inventory = [item for item in inventory if item["tenant_id"] == tenant_id]
-        if not tenant_inventory:
-            print(f"No hay productos disponibles para el tenant {tenant_id}")
+        # Obtener productos específicos del tenant
+        products = get_products_by_tenant(tenant_id)
+        if not products:
+            print(f"Advertencia: No se encontraron productos para el tenant {tenant_id}.")
             continue
 
-        # Seleccionar productos aleatorios del inventario
-        inventory_items = random.sample(tenant_inventory, k=random.randint(1, 5))  # Seleccionar entre 1 y 5 productos
+        # Seleccionar productos aleatorios
+        selected_products = random.sample(products, k=random.randint(1, 5))  # Entre 1 y 5 productos
         product_list = []
         total_price = Decimal(0)
 
-        for item in inventory_items:
-            product_id = item["product_id"]
-            inventory_id = item["inventory_id"]
-            stock = item.get("stock", 0)
-            quantity = random.randint(1, 5)  # Cantidad aleatoria para ingresar al stock
+        for product in selected_products:
+            product_id = product["product_id"]
+            quantity = random.randint(1, 5)  # Cantidad aleatoria entre 1 y 5
 
-            # Obtener el precio del producto desde `pf_productos`
-            price = get_product_price(tenant_id, product_id)
+            # Calcular precio total
+            price = Decimal(str(product["product_price"]))
             total_price += price * quantity
-
-            # Actualizar el stock (incremento)
-            update_inventory_stock(tenant_id, inventory_id, product_id, quantity)
 
             # Agregar producto a la lista
             product_list.append({"product_id": product_id, "quantity": quantity})
+
+            # Actualizar el stock sumando la cantidad (reabastecimiento)
+            try:
+                table_inventario.update_item(
+                    Key={"tenant_id": tenant_id, "ip_id": f"{product['inventory_id']}#{product_id}"},
+                    UpdateExpression="SET stock = stock + :quantity",
+                    ExpressionAttributeValues={":quantity": quantity},
+                )
+            except ClientError as e:
+                print(f"Error al actualizar el stock de {product_id}: {e.response['Error']['Message']}")
 
         # Generar IDs y fechas
         order_id = f"order_{random.randint(1000, 99999)}"
@@ -134,7 +117,7 @@ def generate_orders(users, inventory):
             "user_id": user_id,
             "user_info": user_info,
             "products": product_list,
-            "inventory_id": inventory_items[0]["inventory_id"],  # Tomar el inventario del primer producto
+            "inventory_id": selected_products[0]["inventory_id"],  # Usar el inventario del primer producto
             "creation_date": creation_date.isoformat(),
             "shipping_date": shipping_date.isoformat(),
             "order_status": "PENDING",
@@ -152,16 +135,15 @@ def generate_orders(users, inventory):
 
 # Función principal
 def main():
-    # Obtener datos existentes
+    # Obtener usuarios existentes
     users = get_existing_users()
-    inventory = get_existing_inventory()
 
-    if not users or not inventory:
-        print("No se encontraron usuarios o productos existentes.")
+    if not users:
+        print("No se encontraron usuarios existentes.")
         return
 
     # Generar órdenes
-    orders = generate_orders(users, inventory)
+    orders = generate_orders(users)
 
     # Guardar en archivo JSON
     with open(output_file_orders, "w", encoding="utf-8") as outfile:
