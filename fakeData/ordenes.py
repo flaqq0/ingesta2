@@ -59,7 +59,7 @@ usuarios = get_all_items(users_table)
 generated_order_ids = set()
 orders = []
 
-for _ in range(10):  # Generar 200 órdenes
+for _ in range(10000):  # Generar 200 órdenes
     try:
         # Seleccionar un inventario aleatorio
         inventario = random.choice(inventarios)
@@ -77,7 +77,7 @@ for _ in range(10):  # Generar 200 órdenes
 
         # Generar un order_id único
         while True:
-            order_id = f"order_{random.randint(1000, 99999)}"
+            order_id = f"order_{random.randint(100, 99999)}"
             if order_id not in generated_order_ids:
                 generated_order_ids.add(order_id)
                 break
