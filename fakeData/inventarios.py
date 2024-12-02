@@ -9,7 +9,7 @@ from decimal import Decimal  # Importar Decimal para DynamoDB
 fake = Faker()
 
 # Lista de tenants
-tenants = ["uwu"] #, "wong", "plazavea"]
+tenants = "uwu" #, "wong", "plazavea"]
 
 # Salida
 output_file_inventories = "inventarios.json"
@@ -32,7 +32,7 @@ generated_inventory_ids = set()
 inventories = []
 
 for _ in range(4000):  # Generar 500 inventarios
-    tenant_id = random.choice(tenants)
+    tenant_id = tenants
 
     # Generar un inventory_id único
     while True:
