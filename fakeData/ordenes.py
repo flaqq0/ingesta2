@@ -19,8 +19,9 @@ inventory_table = dynamodb.Table("pf_inventario")
 products_table = dynamodb.Table("pf_productos")
 users_table = dynamodb.Table("pf_usuarios")
 
-# Salida
-output_file_orders = "ordenes.json"
+# Parámetro global para limitar órdenes
+TOTAL_ORDERS = 20  # Cambia este valor para ajustar el número total de órdenes
+generated_orders = 0  # Contador de órdenes generadas
 
 # Obtener todos los registros de una tabla DynamoDB
 def get_all_items(table):
@@ -59,70 +60,79 @@ usuarios = get_all_items(users_table)
 generated_order_ids = set()
 orders = []
 
-for _ in range(10000):  # Generar 200 órdenes
-    try:
-        # Seleccionar un inventario aleatorio
-        inventario = random.choice(inventarios)
-        tenant_id = inventario["tenant_id"]
+for usuario in usuarios:
+    if generated_orders >= TOTAL_ORDERS:  # Detener si ya se alcanzó el límite global
+        break
 
-        # Filtrar productos y usuarios que coincidan con el tenant_id
-        productos_filtrados = [prod for prod in productos if prod["tenant_id"] == tenant_id]
-        usuarios_filtrados = [user for user in usuarios if user["tenant_id"] == tenant_id]
+    tenant_id = usuario["tenant_id"]
+    user_id = usuario["user_id"]
+    user_info = generate_user_info()
 
-        if not productos_filtrados or not usuarios_filtrados:
-            continue  # Saltar si no hay productos o usuarios para este tenant_id
+    # Filtrar inventarios y productos que coincidan con el tenant_id del usuario
+    inventarios_filtrados = [inv for inv in inventarios if inv["tenant_id"] == tenant_id]
+    productos_filtrados = [prod for prod in productos if prod["tenant_id"] == tenant_id]
 
-        producto = random.choice(productos_filtrados)
-        usuario = random.choice(usuarios_filtrados)
+    if not inventarios_filtrados or not productos_filtrados:
+        continue  # Saltar si no hay inventarios o productos para este tenant_id
 
-        # Generar un order_id único
-        while True:
-            order_id = f"order_{random.randint(100, 99999)}"
-            if order_id not in generated_order_ids:
-                generated_order_ids.add(order_id)
-                break
+    for _ in range(random.randint(1, 5)):  # Generar entre 1 y 5 órdenes por usuario
+        if generated_orders >= TOTAL_ORDERS:  # Detener si ya se alcanzó el límite global
+            break
 
-        # Crear lista de productos
-        product_list = [{
-            "product_id": producto["product_id"],
-            "quantity": random.randint(1, 5)  # Cantidad aleatoria entre 1 y 5
-        }]
+        try:
+            # Seleccionar un inventario y productos aleatorios
+            inventario = random.choice(inventarios_filtrados)
+            product_list = [
+                {
+                    "product_id": producto["product_id"],
+                    "quantity": random.randint(1, 5),  # Cantidad aleatoria entre 1 y 5
+                }
+                for producto in random.sample(productos_filtrados, k=random.randint(1, 3))  # Seleccionar 1 a 3 productos
+            ]
 
-        # Generar datos para la orden
-        user_info = generate_user_info()
-        creation_date = generate_creation_date()
-        shipping_date = (datetime.fromisoformat(creation_date) + timedelta(days=7)).isoformat()
+            # Generar un order_id único
+            while True:
+                order_id = f"order_{random.randint(1000, 99999)}"
+                if order_id not in generated_order_ids:
+                    generated_order_ids.add(order_id)
+                    break
 
-        total_price = sum(
-            Decimal(str(producto["product_price"])) * Decimal(str(product["quantity"]))
-            for product in product_list
-        )
+            # Generar datos para la orden
+            creation_date = generate_creation_date()
+            shipping_date = (datetime.fromisoformat(creation_date) + timedelta(days=7)).isoformat()
 
-        order = {
-            "tenant_id": tenant_id,  # Tenant compartido entre producto, usuario y orden
-            "order_id": order_id,
-            "tu_id": f"{tenant_id}#{usuario['user_id']}",
-            "user_id": usuario["user_id"],
-            "user_info": user_info,
-            "inventory_id": inventario["inventory_id"],
-            "creation_date": creation_date,
-            "shipping_date": shipping_date,
-            "order_status": "PENDING",
-            "products": product_list,
-            "total_price": Decimal(str(total_price))
-        }
+            total_price = sum(
+                Decimal(str(next(prod["product_price"] for prod in productos_filtrados if prod["product_id"] == product["product_id"])))
+                * Decimal(product["quantity"])
+                for product in product_list
+            )
 
-        # Subir orden a DynamoDB
-        orders_table.put_item(Item=order)
+            order = {
+                "tenant_id": tenant_id,
+                "order_id": order_id,
+                "tu_id": f"{tenant_id}#{user_id}",
+                "user_id": user_id,
+                "user_info": user_info,
+                "inventory_id": inventario["inventory_id"],
+                "creation_date": creation_date,
+                "shipping_date": shipping_date,
+                "order_status": "PENDING",
+                "products": product_list,
+                "total_price": Decimal(str(total_price)),
+            }
 
-        # Agregar al archivo JSON
-        orders.append(order)
+            # Subir orden a DynamoDB
+            orders_table.put_item(Item=order)
 
-    except ClientError as e:
-        print(f"Error al insertar en la tabla pf_ordenes: {e.response['Error']['Message']}")
+            # Agregar al archivo JSON
+            orders.append(order)
+            generated_orders += 1  # Incrementar el contador
+
+        except ClientError as e:
+            print(f"Error al insertar en la tabla pf_ordenes: {e.response['Error']['Message']}")
 
 # Guardar en archivo JSON
 with open(output_file_orders, "w", encoding="utf-8") as outfile:
     json.dump(orders, outfile, ensure_ascii=False, indent=4, default=str)
 
-print(f"Datos generados exitosamente. Guardados en {output_file_orders} y subidos a DynamoDB.")
+print(f"Órdenes generadas exitosamente. Guardadas en {output_file_orders} y subidas a DynamoDB.")
