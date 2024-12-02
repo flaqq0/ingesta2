@@ -47,40 +47,32 @@ def generate_stock(max_stock):
 def generate_inventory_products(inventories, products, target_count=10):
     inventory_products = []
 
-    for _ in range(target_count):  # Intentar generar la cantidad deseada de relaciones
-        while True:
-            # Seleccionar un tenant aleatoriamente
+    for _ in range(target_count):
+        attempts = 0
+        max_attempts = 100  # Evitar bucles infinitos
+        while attempts < max_attempts:
+            attempts += 1
+
+            # Seleccionar un tenant aleatorio
             tenant_id = random.choice(tenants)
 
-            # Filtrar inventarios por tenant_id
-            tenant_inventories = [inventory for inventory in inventories if inventory["tenant_id"] == tenant_id]
-            if not tenant_inventories:
-                continue  # Si no hay inventarios para este tenant, repetir el bucle
+            # Filtrar inventarios y productos del tenant
+            tenant_inventories = [inv for inv in inventories if inv["tenant_id"] == tenant_id]
+            tenant_products = [prod for prod in products if prod["tenant_id"] == tenant_id]
 
-            # Seleccionar un inventario existente
+            if not tenant_inventories or not tenant_products:
+                continue  # Si no hay datos, repetir
+
+            # Seleccionar inventario y producto
             inventory = random.choice(tenant_inventories)
-            inventory_id = inventory["inventory_id"]
-            inventory_stock = inventory.get("stock", 1000)  # Valor predeterminado si no existe stock
-
-            # Filtrar productos por tenant_id
-            tenant_products = [product for product in products if product["tenant_id"] == tenant_id]
-            if not tenant_products:
-                continue  # Si no hay productos para este tenant, repetir el bucle
-
-            # Seleccionar un producto existente
             product = random.choice(tenant_products)
+
+            inventory_id = inventory["inventory_id"]
             product_id = product["product_id"]
-
-            # Generar ip_id
             ip_id = f"{inventory_id}#{product_id}"
+            stock = generate_stock(inventory.get("stock", 1000))
 
-            # Generar stock para el producto
-            stock = generate_stock(inventory_stock)
-
-            # Observaciones aleatorias
-            observaciones = f"Stock asignado para el inventario {inventory_id}"
-
-            # Crear el registro
+            # Crear registro
             inventory_product = {
                 "tenant_id": tenant_id,
                 "ip_id": ip_id,
@@ -88,7 +80,7 @@ def generate_inventory_products(inventories, products, target_count=10):
                 "product_id": product_id,
                 "stock": stock,
                 "last_modification": datetime.now().isoformat(),
-                "observaciones": observaciones,
+                "observaciones": f"Stock asignado para el inventario {inventory_id}",
             }
 
             inventory_products.append(inventory_product)
@@ -99,10 +91,11 @@ def generate_inventory_products(inventories, products, target_count=10):
             except ClientError as e:
                 print(f"Error al agregar inventario-producto {ip_id}: {e.response['Error']['Message']}")
 
-            # Salir del bucle interno al encontrar una relación válida
+            # Salir del bucle si se encontró un producto válido
             break
 
     return inventory_products
+
 
 # Función principal
 def main():
