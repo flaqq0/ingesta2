@@ -1,0 +1,63 @@
+services:
+  ingesta-pf_usuarios:
+    container_name: pf_usuarios
+    build: ./pf_usuarios
+    environment:
+      - STAGE=${STAGE}
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      - ./logs:/logs
+
+  ingesta-pf_productos:
+    container_name: pf_productos
+    build: ./pf_productos
+    environment:
+      - STAGE=${STAGE}
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      - ./logs:/logs
+
+  ingesta-pf_ordenes:
+    container_name: pf_ordenes
+    build: ./pf_ordenes
+    environment:
+      - STAGE=${STAGE}
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      - ./logs:/logs
+
+  ingesta-pf_comentarios:
+    container_name: pf_comentarios
+    build: ./pf_comentarios
+    environment:
+      - STAGE=${STAGE}
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      - ./logs:/logs
+
+  ingesta-pf_inventarios:
+    container_name: pf_inventarios
+    build: ./pf_inventarios
+    environment:
+      - STAGE=${STAGE}
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      - ./logs:/logs
+
+  ingesta-pf_pagos:
+    container_name: pf_pagos
+    build: ./pf_pagos
+    environment:
+      - STAGE=${STAGE}
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      - ./logs:/logs
+
+  ingesta-pf_personalizaciones:
+    container_name: pf_personalizaciones
+    build: ./pf_personalizaciones
+    environment:
+      - STAGE=${STAGE}
+    volumes:
+      - ~/.aws:/root/.aws:ro
+      - ./logs:/logs
