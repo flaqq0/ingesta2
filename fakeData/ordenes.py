@@ -11,9 +11,10 @@ region_name = "us-east-1"
 dynamodb = boto3.resource("dynamodb", region_name=region_name)
 table_usuarios = dynamodb.Table("pf_usuarios")
 table_inventario = dynamodb.Table("pf_inventario")
+table_productos = dynamodb.Table("pf_productos")
 table_ordenes = dynamodb.Table("pf_ordenes")
 
-# Inicializar Faker
+# Inicializar Faker (direcciones internacionales)
 fake = Faker()
 
 # Lista de tenants
@@ -40,18 +41,33 @@ def get_existing_inventory():
         print(f"Error al obtener inventarios: {e.response['Error']['Message']}")
         return []
 
-# Generar información de usuario (departamento, provincia, distrito, dirección)
+# Obtener el precio del producto desde la tabla `pf_productos`
+def get_product_price(tenant_id, product_id):
+    try:
+        response = table_productos.get_item(Key={"tenant_id": tenant_id, "product_id": product_id})
+        product = response.get("Item")
+        if product and "product_price" in product:
+            return Decimal(str(product["product_price"]))
+        else:
+            print(f"Advertencia: No se encontró precio para el producto {product_id}")
+            return Decimal(0)  # Precio predeterminado si no está presente
+    except ClientError as e:
+        print(f"Error al obtener precio del producto {product_id}: {e.response['Error']['Message']}")
+        return Decimal(0)
+
+# Generar información de usuario (direcciones internacionales)
 def generate_user_info():
     return {
-        "departamento": fake.state(),
-        "distrito": fake.city(),
+        "pais": fake.country(),
+        "ciudad": fake.city(),
         "direccion": fake.street_address(),
+        "codigo_postal": fake.postcode(),
     }
 
 # Generar órdenes
 def generate_orders(users, inventory):
     orders = []
-    for _ in range(1):  # Generar 100 órdenes
+    for _ in range(100):  # Generar 100 órdenes
         tenant_id = random.choice(tenants)
 
         # Seleccionar un usuario existente
@@ -68,21 +84,10 @@ def generate_orders(users, inventory):
             product_id = item["product_id"]
             inventory_id = item["inventory_id"]
             stock = item.get("stock", 10)  # Stock predeterminado si no está presente
-            quantity = random.randint(1, min(stock, 5))  # Cantidad de producto menor o igual al stock
+            quantity = random.randint(1, min(stock, 5))  # Cantidad de producto menor o igual al stock disponible
 
-            # Actualizar el stock en DynamoDB
-            new_stock = stock - quantity
-            try:
-                table_inventario.update_item(
-                    Key={"tenant_id": tenant_id, "ip_id": f"{inventory_id}#{product_id}"},
-                    UpdateExpression="SET stock = :new_stock",
-                    ExpressionAttributeValues={":new_stock": new_stock},
-                )
-            except ClientError as e:
-                print(f"Error al actualizar el stock de {product_id}: {e.response['Error']['Message']}")
-
-            # Calcular precio total
-            price = Decimal(str(item["product_price"]))
+            # Obtener el precio del producto desde `pf_productos`
+            price = get_product_price(tenant_id, product_id)
             total_price += price * quantity
 
             # Agregar producto a la lista
