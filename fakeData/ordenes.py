@@ -62,6 +62,11 @@ if not usuarios or not inventarios or not productos:
     print("No hay datos suficientes en DynamoDB para generar órdenes.")
     exit(1)
 
+# Crear mapeo de product_id a inventarios válidos
+product_inventory_map = {}
+for inv in inventarios:
+    product_inventory_map[inv["product_id"]] = inv["inventory_id"]
+
 # Generar exactamente 20 órdenes
 generated_orders = []
 generated_order_ids = set()
@@ -73,17 +78,11 @@ for _ in range(TOTAL_ORDERS):
     user_id = usuario["user_id"]
     user_info = generate_user_info()
 
-    # Filtrar inventarios que coincidan con el tenant_id del usuario
-    inventarios_filtrados = [inv for inv in inventarios if inv["tenant_id"] == tenant_id]
-    if not inventarios_filtrados:
-        print(f"Saltando usuario {user_id}: No hay inventarios válidos para tenant_id {tenant_id}")
-        continue
-
-    # Crear mapeo de product_id a inventory_id
-    product_inventory_map = {inv["product_id"]: inv["inventory_id"] for inv in inventarios_filtrados}
-
-    # Filtrar productos disponibles en inventarios válidos
-    productos_filtrados = [prod for prod in productos if prod["product_id"] in product_inventory_map]
+    # Filtrar productos y validarlos en inventarios
+    productos_filtrados = [
+        prod for prod in productos
+        if prod["tenant_id"] == tenant_id and prod["product_id"] in product_inventory_map
+    ]
 
     if not productos_filtrados:
         print(f"Saltando usuario {user_id}: No hay productos disponibles para tenant_id {tenant_id}")
