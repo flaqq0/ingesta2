@@ -1,5 +1,6 @@
 import boto3
 import json
+import random
 from decimal import Decimal
 from botocore.exceptions import ClientError
 
@@ -13,6 +14,10 @@ payments_table = dynamodb.Table("pf_pagos")
 
 # Salida
 output_file_payments = "pagos.json"
+
+# Parámetro global para limitar pagos
+TOTAL_PAYMENTS = 20  # Número máximo de pagos
+generated_payments = 0
 
 # Obtener todas las órdenes de un usuario
 def get_orders_by_user(user_id, tenant_id):
@@ -49,6 +54,12 @@ for order in orders:
 # Crear pagos para todas las órdenes de cada usuario
 for (tenant_id, user_id), user_orders in users_orders.items():
     for order in user_orders:
+        if generated_payments >= TOTAL_PAYMENTS:
+            break
+        if order.get("order_status") == "APPROVED PAYMENT":
+            print(f"Saltando orden {order['order_id']}: Ya tiene el estado 'APPROVED PAYMENT'.")
+            continue
+
         try:
             order_id = order["order_id"]
             user_info = order["user_info"]
@@ -86,6 +97,7 @@ for (tenant_id, user_id), user_orders in users_orders.items():
 
             # Agregar al archivo JSON
             payments.append(payment)
+            generated_payments += 1
 
         except ClientError as e:
             print(f"Error al insertar en la tabla pf_pagos: {e.response['Error']['Message']}")
@@ -94,4 +106,4 @@ for (tenant_id, user_id), user_orders in users_orders.items():
 with open(output_file_payments, "w", encoding="utf-8") as outfile:
     json.dump(payments, outfile, ensure_ascii=False, indent=4, default=str)
 
-print(f"Pagos generados exitosamente. Guardados en {output_file_payments} y subidos a DynamoDB.")
+print(f"{generated_payments} pagos generados exitosamente. Guardados en {output_file_payments} y subidos a DynamoDB.")
