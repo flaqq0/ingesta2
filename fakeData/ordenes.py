@@ -44,7 +44,6 @@ def get_existing_inventory():
 def generate_user_info():
     return {
         "departamento": fake.state(),
-        "provincia": fake.county(),
         "distrito": fake.city(),
         "direccion": fake.street_address(),
     }
