@@ -14,7 +14,7 @@ table_inventario = dynamodb.Table("pf_inventario")
 table_ordenes = dynamodb.Table("pf_ordenes")
 
 # Inicializar Faker
-fake = Faker("es_PE")
+fake = Faker()
 
 # Lista de tenants
 tenants = ["uwu", "plazavea", "wong"]
