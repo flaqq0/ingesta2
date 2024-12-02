@@ -9,7 +9,7 @@ from decimal import Decimal  # Importar Decimal para DynamoDB
 fake = Faker()
 
 # Lista de tenants
-tenants = ["uwu", "wong", "plazavea"]
+tenants = "uwu" #, "wong", "plazavea"]
 
 # Salida
 output_file_inventories = "inventarios.json"
@@ -21,7 +21,7 @@ table = dynamodb.Table("pf_inventarios")  # Cambia por el nombre de tu tabla Dyn
 
 # Función para generar un stock aleatorio
 def random_stock():
-    return random.randint(0, 1000)
+    return random.randint(50, 10000)
 
 # Función para generar observaciones aleatorias
 def random_observations():
@@ -31,7 +31,7 @@ def random_observations():
 generated_inventory_ids = set()
 inventories = []
 
-for _ in range(10200):  # Generar 500 inventarios
+for _ in range(4000):  # Generar 500 inventarios
     tenant_id = random.choice(tenants)
 
     # Generar un inventory_id único

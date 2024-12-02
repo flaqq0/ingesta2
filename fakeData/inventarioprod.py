@@ -12,7 +12,7 @@ table_productos = dynamodb.Table("pf_productos")
 table_inventario_productos = dynamodb.Table("pf_inventario")  # Tabla para la relación inventario-producto
 
 # Lista de tenants
-tenants = ["uwu", "wong", "plazavea"]
+tenants = ["uwu", "plazavea"]
 
 # Salida
 output_file_inventory_products = "inventario_productos.json"
@@ -48,7 +48,7 @@ def generate_stock(max_stock):
 def generate_inventory_products(inventories, products):
     inventory_products = []
 
-    for _ in range(20000):  # Generar 500 registros
+    for _ in range(5000):  # Generar 500 registros
         # Seleccionar un tenant aleatoriamente
         tenant_id = random.choice(tenants)
 
