@@ -12,7 +12,7 @@ table_productos = dynamodb.Table("pf_productos")
 table_inventario_productos = dynamodb.Table("pf_inventario")  # Tabla para la relación inventario-producto
 
 # Lista de tenants
-tenants = ["uwu"] #["wong", "plazavea"]
+tenants = ["plazavea"] #["wong", "uwu"]
 
 # Salida
 output_file_inventory_products = "inventario_productos.json"
