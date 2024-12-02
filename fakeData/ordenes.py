@@ -32,25 +32,38 @@ def get_existing_users():
         print(f"Error al obtener usuarios: {e.response['Error']['Message']}")
         return []
 
-# Obtener productos en inventario
-def get_existing_inventory():
+# Obtener productos cruzados con inventario
+def get_products_with_inventory(tenant_id):
     try:
-        response = table_inventario.scan()
-        return response.get("Items", [])
-    except ClientError as e:
-        print(f"Error al obtener inventarios: {e.response['Error']['Message']}")
-        return []
-
-# Obtener productos de un tenant específico
-def get_products_by_tenant(tenant_id):
-    try:
-        response = table_productos.scan(
+        # Obtener inventarios del tenant
+        inventory_response = table_inventario.scan(
             FilterExpression="tenant_id = :tenant_id",
             ExpressionAttributeValues={":tenant_id": tenant_id}
         )
-        return response.get("Items", [])
+        inventory_items = inventory_response.get("Items", [])
+
+        # Obtener productos del tenant
+        products_response = table_productos.scan(
+            FilterExpression="tenant_id = :tenant_id",
+            ExpressionAttributeValues={":tenant_id": tenant_id}
+        )
+        product_items = products_response.get("Items", [])
+
+        # Cruzar productos con inventarios
+        products_with_inventory = []
+        for inventory in inventory_items:
+            for product in product_items:
+                if product["product_id"] == inventory["product_id"]:
+                    products_with_inventory.append({
+                        "tenant_id": tenant_id,
+                        "product_id": product["product_id"],
+                        "inventory_id": inventory["inventory_id"],
+                        "product_price": Decimal(str(product["product_price"])),
+                        "product_name": product["product_name"]
+                    })
+        return products_with_inventory
     except ClientError as e:
-        print(f"Error al obtener productos para tenant {tenant_id}: {e.response['Error']['Message']}")
+        print(f"Error al cruzar productos e inventarios para tenant {tenant_id}: {e.response['Error']['Message']}")
         return []
 
 # Generar información de usuario (direcciones internacionales)
@@ -73,37 +86,26 @@ def generate_orders(users):
         user_id = user["user_id"]
         user_info = generate_user_info()
 
-        # Obtener productos específicos del tenant
-        products = get_products_by_tenant(tenant_id)
-        if not products:
+        # Obtener productos del tenant
+        products_with_inventory = get_products_with_inventory(tenant_id)
+        if not products_with_inventory:
             print(f"Advertencia: No se encontraron productos para el tenant {tenant_id}.")
             continue
 
         # Seleccionar productos aleatorios
-        selected_products = random.sample(products, k=random.randint(1, 5))  # Entre 1 y 5 productos
+        selected_products = random.sample(products_with_inventory, k=random.randint(1, 5))  # Entre 1 y 5 productos
         product_list = []
         total_price = Decimal(0)
 
         for product in selected_products:
-            product_id = product["product_id"]
             quantity = random.randint(1, 5)  # Cantidad aleatoria entre 1 y 5
+            total_price += product["product_price"] * quantity
 
-            # Calcular precio total
-            price = Decimal(str(product["product_price"]))
-            total_price += price * quantity
-
-            # Agregar producto a la lista
-            product_list.append({"product_id": product_id, "quantity": quantity})
-
-            # Actualizar el stock sumando la cantidad (reabastecimiento)
-            try:
-                table_inventario.update_item(
-                    Key={"tenant_id": tenant_id, "ip_id": f"{product['inventory_id']}#{product_id}"},
-                    UpdateExpression="SET stock = stock + :quantity",
-                    ExpressionAttributeValues={":quantity": quantity},
-                )
-            except ClientError as e:
-                print(f"Error al actualizar el stock de {product_id}: {e.response['Error']['Message']}")
+            product_list.append({
+                "product_id": product["product_id"],
+                "quantity": quantity,
+                "product_name": product["product_name"]
+            })
 
         # Generar IDs y fechas
         order_id = f"order_{random.randint(1000, 99999)}"
