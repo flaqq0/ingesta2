@@ -17,7 +17,7 @@ table_ordenes = dynamodb.Table("pf_ordenes")
 fake = Faker()
 
 # Lista de tenants
-tenants = ["uwu", "plazavea", "wong"]
+tenants = ["uwu", "plazavea"]
 
 # Salida
 output_file_orders = "ordenes.json"
