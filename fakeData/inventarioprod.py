@@ -35,7 +35,7 @@ productos = get_all_items(productos_table)
 
 # Generar datos para la tabla pf_inventario
 productos_inventarios = []
-for _ in range(50):  # Generar 500 registros
+for _ in range(11800):  # Generar 500 registros
     try:
         # Seleccionar un inventario y un producto aleatorio con el mismo tenant_id
         inventario = random.choice(inventarios)
