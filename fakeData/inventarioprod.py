@@ -48,7 +48,7 @@ def generate_stock(max_stock):
 def generate_inventory_products(inventories, products):
     inventory_products = []
 
-    for _ in range(4000):  # Generar 500 registros
+    for _ in range(1):  # Generar 500 registros
         # Seleccionar un tenant aleatoriamente
         tenant_id = random.choice(tenants)
 
