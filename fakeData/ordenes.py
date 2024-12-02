@@ -43,8 +43,8 @@ def get_existing_inventory():
 # Generar información de usuario (departamento, provincia, distrito, dirección)
 def generate_user_info():
     return {
-        "departamento": fake.department(),
-        "provincia": fake.state(),
+        "departamento": fake.state(),
+        "provincia": fake.county(),
         "distrito": fake.city(),
         "direccion": fake.street_address(),
     }
