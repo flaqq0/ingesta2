@@ -16,7 +16,6 @@ dynamodb = boto3.resource("dynamodb", region_name=region_name)
 # Tablas DynamoDB
 orders_table = dynamodb.Table("pf_ordenes")
 inventory_table = dynamodb.Table("pf_inventario")
-products_table = dynamodb.Table("pf_productos")
 users_table = dynamodb.Table("pf_usuarios")
 
 output_file_orders = "ordenes.json"
@@ -52,13 +51,12 @@ def generate_creation_date():
     random_days = random.randint(0, 364)  # Excluye hoy
     return (start_date + timedelta(days=random_days)).isoformat()
 
-# Obtener inventarios, productos y usuarios existentes
+# Obtener inventarios y usuarios existentes
 inventarios = get_all_items(inventory_table)
-productos = get_all_items(products_table)
 usuarios = get_all_items(users_table)
 
 # Validación de datos
-if not usuarios or not inventarios or not productos:
+if not usuarios or not inventarios:
     print("No hay datos suficientes en DynamoDB para generar órdenes.")
     exit(1)
 
@@ -73,30 +71,30 @@ for _ in range(TOTAL_ORDERS):
     user_id = usuario["user_id"]
     user_info = generate_user_info()
 
-    # Filtrar inventarios y productos que coincidan con el tenant_id del usuario
+    # Filtrar inventarios que coincidan con el tenant_id del usuario
     inventarios_filtrados = [inv for inv in inventarios if inv["tenant_id"] == tenant_id]
     if not inventarios_filtrados:
         print(f"Saltando usuario {user_id}: No hay inventarios válidos para tenant_id {tenant_id}")
         continue
 
-    productos_disponibles = [
-        prod for prod in productos
-        if any(inv["product_id"] == prod["product_id"] for inv in inventarios_filtrados)
-    ]
-    if not productos_disponibles:
-        print(f"Saltando usuario {user_id}: No hay productos disponibles en el inventario para tenant_id {tenant_id}")
-        continue
-
     try:
-        # Seleccionar un inventario y productos aleatorios
-        inventario = random.choice(inventarios_filtrados)
+        # Seleccionar productos desde los inventarios
+        product_inventory_map = {}  # Mapeo de product_id a inventory_id
+        for inventario in inventarios_filtrados:
+            product_inventory_map[inventario["product_id"]] = inventario["inventory_id"]
+
+        # Seleccionar productos únicos (de 1 a 3 productos aleatorios)
+        selected_products = random.sample(list(product_inventory_map.keys()), k=random.randint(1, 3))
         product_list = [
             {
-                "product_id": producto["product_id"],
+                "product_id": product_id,
                 "quantity": random.randint(1, 5),  # Cantidad aleatoria entre 1 y 5
             }
-            for producto in random.sample(productos_disponibles, k=random.randint(1, 3))  # Seleccionar 1 a 3 productos
+            for product_id in selected_products
         ]
+
+        # Obtener los inventory_id correspondientes
+        inventory_ids = list({product_inventory_map[prod["product_id"]] for prod in product_list})
 
         # Generar un order_id único
         while True:
@@ -109,9 +107,9 @@ for _ in range(TOTAL_ORDERS):
         creation_date = generate_creation_date()
         shipping_date = (datetime.fromisoformat(creation_date) + timedelta(days=7)).isoformat()
 
+        # Calcular el precio total
         total_price = sum(
-            Decimal(str(next(prod["product_price"] for prod in productos_disponibles if prod["product_id"] == product["product_id"])))
-            * Decimal(product["quantity"])
+            Decimal("10.0") * Decimal(product["quantity"])  # Precio fijo para simplificar
             for product in product_list
         )
 
@@ -121,7 +119,7 @@ for _ in range(TOTAL_ORDERS):
             "tu_id": f"{tenant_id}#{user_id}",
             "user_id": user_id,
             "user_info": user_info,
-            "inventory_id": inventario["inventory_id"],
+            "inventory_ids": inventory_ids,
             "creation_date": creation_date,
             "shipping_date": shipping_date,
             "order_status": "PENDING",
