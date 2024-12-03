@@ -66,7 +66,7 @@ generated_inventory_ids = set()
 inventories = []
 
 # Inventarios para plazavea
-for i in range(10): #inventarios a crear
+for i in range(1): #inventarios a crear
     tenant_id = "plazavea"
     inventory_name = random.choice(unique_peru_locations)
 
@@ -86,7 +86,7 @@ for i in range(10): #inventarios a crear
     inventories.append(inventory)
 
 # Inventarios adicionales de plazavea (en otros países)
-for i in range(15): # inventarios a crear
+for i in range(1): # inventarios a crear
     tenant_id = "plazavea"
     inventory_name = f"{fake.state()}-{fake.city()}"
 
@@ -106,7 +106,7 @@ for i in range(15): # inventarios a crear
     inventories.append(inventory)
 
 # Inventarios para wong
-for i in range(18): #inventarios a crear
+for i in range(1): #inventarios a crear
     tenant_id = "wong"
     inventory_name = unique_peru_locations[i]
 
@@ -126,7 +126,7 @@ for i in range(18): #inventarios a crear
     inventories.append(inventory)
 
 # Inventarios adicionales de wong (en otros países)
-for i in range(12): #inventarios a crear
+for i in range(1): #inventarios a crear
     tenant_id = "wong"
     inventory_name = f"{fake.state()}-{fake.city()}"
 
@@ -167,7 +167,7 @@ for loc in provincias_lima + provincias_arequipa:
     inventories.append(inventory)
 
 # Inventarios adicionales de uwu (en Estados Unidos, Reino Unido y España)
-for i in range(15): #inventarios a crear
+for i in range(1): #inventarios a crear
     tenant_id = "uwu"
     country = random.choice(["United States", "United Kingdom", "Spain"])
     inventory_name = f"{country}-{fake.city()}"
