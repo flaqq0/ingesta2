@@ -26,7 +26,7 @@ def random_stock():
 
 # Función para generar observaciones aleatorias
 def random_observations():
-    return fake.sentence(nb_words=20)
+    return fake.sentence(nb_words=10)
 
 # Leer datos del archivo Pere.csv
 def load_peru_locations(file_path):
@@ -48,7 +48,7 @@ generated_inventory_ids = set()
 inventories = []
 
 # Inventarios para plazavea
-for i in range(1): #inventarios a crear
+for i in range(1800): #inventarios a crear
     tenant_id = "plazavea"
     inventory_name = random.choice(unique_peru_locations)
 
@@ -68,7 +68,7 @@ for i in range(1): #inventarios a crear
     inventories.append(inventory)
 
 # Inventarios adicionales de plazavea (en otros países)
-for i in range(1): # inventarios a crear
+for i in range(3000): # inventarios a crear
     tenant_id = "plazavea"
     inventory_name = f"{fake.state()}-{fake.city()}"
 
@@ -88,7 +88,7 @@ for i in range(1): # inventarios a crear
     inventories.append(inventory)
 
 # Inventarios para wong
-for i in range(1): #inventarios a crear
+for i in range(1700): #inventarios a crear
     tenant_id = "wong"
     inventory_name = unique_peru_locations[i]
 
@@ -108,7 +108,7 @@ for i in range(1): #inventarios a crear
     inventories.append(inventory)
 
 # Inventarios adicionales de wong (en otros países)
-for i in range(1): #inventarios a crear
+for i in range(2000): #inventarios a crear
     tenant_id = "wong"
     inventory_name = f"{fake.state()}-{fake.city()}"
 
@@ -149,7 +149,7 @@ for loc in provincias_lima + provincias_arequipa:
     inventories.append(inventory)
 
 # Inventarios adicionales de uwu (en Estados Unidos, Reino Unido y España)
-for i in range(1): #inventarios a crear
+for i in range(4000): #inventarios a crear
     tenant_id = "uwu"
     country = random.choice(["United States", "United Kingdom", "Spain"])
     inventory_name = f"{country}-{fake.city()}"
