@@ -40,17 +40,23 @@ def get_all_items(table):
     return items
 
 # Función para eliminar todos los datos de una tabla DynamoDB
-def delete_all_items(table):
+def delete_all_items_and_remove_inventory_ids(table):
     try:
         items = get_all_items(table)
         for item in items:
+            # Actualizar el elemento para eliminar el campo "inventory_ids"
+            table.update_item(
+                Key={"tenant_id": item["tenant_id"], "order_id": item["order_id"]},
+                UpdateExpression="REMOVE inventory_ids",
+            )
+            # Eliminar el elemento de la tabla
             table.delete_item(Key={"tenant_id": item["tenant_id"], "order_id": item["order_id"]})
-        print(f"Todos los datos eliminados de la tabla {table.table_name}.")
+        print(f"Todos los datos eliminados de la tabla {table.table_name} y 'inventory_ids' removido.")
     except ClientError as e:
         print(f"Error al eliminar datos de la tabla {table.table_name}: {e.response['Error']['Message']}")
 
-# Eliminar datos previos de la tabla de órdenes
-delete_all_items(orders_table)
+# Eliminar datos previos de la tabla de órdenes y el campo "inventory_ids"
+delete_all_items_and_remove_inventory_ids(orders_table)
 
 # Generar user_info
 def generate_user_info():
@@ -158,7 +164,7 @@ for tenant_id, user_list in tenant_users.items():
                 "tu_id": f"{tenant_id}#{user_id}",
                 "user_id": user_id,
                 "user_info": user_info,
-                "inventory_ids": [inventory_id],
+                "inventory_id": inventory_id,
                 "creation_date": creation_date,
                 "shipping_date": shipping_date,
                 "order_status": "PENDING",
