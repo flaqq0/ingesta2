@@ -147,7 +147,6 @@ for (tenant_id, user_id), user_orders in users_orders.items():
 
         try:
             order_id = order["order_id"]
-            user_info = order["user_info"]
             fecha_pago = (datetime.fromisoformat(order["creation_date"]) + timedelta(days=random.randint(0, 2))).isoformat()  # Fecha de pago ajustada
             total_price = Decimal(str(order["total_price"]))  # Convertir a Decimal
 
@@ -158,6 +157,9 @@ for (tenant_id, user_id), user_orders in users_orders.items():
                     generated_payment_ids.add(pago_id)
                     break
 
+            # Generar el método de pago
+            user_info = generate_payment_method()
+
             # Crear el pago
             payment = {
                 "tenant_id": tenant_id,
@@ -167,7 +169,7 @@ for (tenant_id, user_id), user_orders in users_orders.items():
                 "user_id": user_id,
                 "total": total_price,  # Asegurarse de usar Decimal
                 "fecha_pago": fecha_pago,
-                "user_info": user_info,
+                "user_info": user_info,  # Método de pago generado
             }
 
             # Subir pago a DynamoDB
@@ -186,7 +188,6 @@ for (tenant_id, user_id), user_orders in users_orders.items():
 
         except ClientError as e:
             print(f"Error al insertar en la tabla pf_pagos: {e.response['Error']['Message']}")
-
 
 # Guardar en archivo JSON
 with open(output_file_payments, "w", encoding="utf-8") as outfile:
