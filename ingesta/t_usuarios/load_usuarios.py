@@ -7,6 +7,13 @@ from datetime import datetime
 
 # Configuración del logger
 LOG_FILE_PATH = "./logs/load_usuarios.log"
+logger.add(
+    LOG_FILE_PATH,
+    format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {message}",
+    level="INFO",
+    rotation="10 MB"
+)
+'''
 CUSTOM_DATE = "2024-11-30"
 logger.add(
     LOG_FILE_PATH,
@@ -14,7 +21,7 @@ logger.add(
     level="INFO",
     rotation="10 MB"
 )
-
+'''
 # Variables globales
 BASE_DIRECTORY = "./exported_data"
 BUCKET_NAME = "aproyecto-dev"

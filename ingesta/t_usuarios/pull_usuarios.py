@@ -6,10 +6,9 @@ from datetime import datetime
 
 # Configuración de logger con milisegundos
 LOG_FILE_PATH = "./logs/pull_users.log"
-CUSTOM_DATE = "2024-11-30"
 logger.add(
     LOG_FILE_PATH,
-    format=f"{CUSTOM_DATE} {{time:HH:mm:ss.SSS}} | {{level}} | {{message}}",
+    format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {message}",
     level="INFO",
     rotation="10 MB"
 )
