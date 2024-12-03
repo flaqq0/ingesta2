@@ -46,64 +46,68 @@ delete_all_items(inventario_producto_table)
 inventarios = get_all_items(inventarios_table)
 productos = get_all_items(productos_table)
 
-# Generar datos para la tabla pf_inventario
-productos_inventarios = []
-
-# Filtrar inventarios y productos por tenant_id
+# Agrupar inventarios y productos por tenant_id
 tenant_inventarios = {}
+tenant_productos = {}
+
 for inv in inventarios:
     tenant_id = inv["tenant_id"]
     if tenant_id not in tenant_inventarios:
         tenant_inventarios[tenant_id] = []
     tenant_inventarios[tenant_id].append(inv)
 
-tenant_productos = {}
 for prod in productos:
     tenant_id = prod["tenant_id"]
     if tenant_id not in tenant_productos:
         tenant_productos[tenant_id] = []
     tenant_productos[tenant_id].append(prod)
 
-# Generar 20 relaciones de producto-inventario por tenant_id
-for tenant_id, tenant_inv_list in tenant_inventarios.items():
-    tenant_prod_list = tenant_productos.get(tenant_id, [])
-    if not tenant_prod_list or not tenant_inv_list:
-        continue  # Saltar si no hay productos o inventarios para este tenant_id
+# Generar datos para la tabla pf_inventario
+productos_inventarios = []
 
-    for _ in range(20):  # Generar 20 registros por tenant_id
-        inventario = random.choice(tenant_inv_list)
-        producto = random.choice(tenant_prod_list)
+for tenant_id in tenant_inventarios.keys():
+    inventarios_list = tenant_inventarios[tenant_id]
+    productos_list = tenant_productos.get(tenant_id, [])
 
-        # Generar stock aleatorio para el producto
-        max_stock = inventario.get("stock", 0)
-        if max_stock == 0:
-            continue  # Saltar si el inventario no tiene stock disponible
-        stock = random.randint(1, max_stock)
+    if not inventarios_list or not productos_list:
+        print(f"Saltando tenant_id '{tenant_id}' porque no tiene inventarios o productos disponibles.")
+        continue
 
-        # Crear registro para pf_inventario
-        ip_id = f"{inventario['inventory_id']}#{producto['product_id']}"
-        observaciones = f"Producto agregado al inventario {inventario['inventory_name']}."
-        last_modification = datetime.now().isoformat()
-
-        producto_inventario = {
-            "tenant_id": tenant_id,
-            "ip_id": ip_id,
-            "inventory_id": inventario["inventory_id"],
-            "product_id": producto["product_id"],
-            "stock": stock,
-            "last_modification": last_modification,
-            "observaciones": observaciones,
-        }
-
-        # Insertar en DynamoDB
+    for inventario in inventarios_list:
         try:
-            inventario_producto_table.put_item(Item=producto_inventario)
+            # Seleccionar 10 productos aleatorios del tenant_id
+            selected_products = random.sample(productos_list, k=10)
+
+            for producto in selected_products:
+                # Generar stock aleatorio para el producto, respetando el stock del inventario
+                max_stock = inventario.get("stock", 0)
+                if max_stock == 0:
+                    continue  # Saltar si el inventario no tiene stock disponible
+                stock = random.randint(1, max_stock)
+
+                # Crear registro para pf_inventario
+                ip_id = f"{inventario['inventory_id']}#{producto['product_id']}"
+                observaciones = f"Producto agregado al inventario {inventario['inventory_name']}."
+                last_modification = datetime.now().isoformat()
+
+                producto_inventario = {
+                    "tenant_id": tenant_id,
+                    "ip_id": ip_id,
+                    "inventory_id": inventario["inventory_id"],
+                    "product_id": producto["product_id"],
+                    "stock": stock,
+                    "last_modification": last_modification,
+                    "observaciones": observaciones,
+                }
+
+                # Insertar en DynamoDB
+                inventario_producto_table.put_item(Item=producto_inventario)
+
+                # Agregar al archivo JSON
+                productos_inventarios.append(producto_inventario)
+
         except ClientError as e:
             print(f"Error al insertar en la tabla pf_inventario: {e.response['Error']['Message']}")
-            continue
-
-        # Agregar al archivo JSON
-        productos_inventarios.append(producto_inventario)
 
 # Guardar los datos generados en un archivo JSON
 with open(output_file, "w", encoding="utf-8") as outfile:
