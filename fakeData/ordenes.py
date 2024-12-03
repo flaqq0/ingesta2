@@ -23,10 +23,10 @@ users_table = dynamodb.Table("pf_usuarios")
 output_file_orders = "ordenes.json"
 
 # Parámetro global para limitar órdenes
-TOTAL_ORDERS = 20  # Cambia este valor para ajustar el número total de órdenes
+TOTAL_ORDERS = 12000  # Cambia este valor para ajustar el número total de órdenes
 generated_orders = 0  # Contador de órdenes generadas
 
-# Obtener todos los registros de una tabla DynamoDB
+# Función para obtener todos los registros de una tabla DynamoDB
 def get_all_items(table):
     items = []
     try:
@@ -38,6 +38,19 @@ def get_all_items(table):
     except ClientError as e:
         print(f"Error al obtener datos de la tabla {table.table_name}: {e.response['Error']['Message']}")
     return items
+
+# Función para eliminar todos los datos de una tabla DynamoDB
+def delete_all_items(table):
+    try:
+        items = get_all_items(table)
+        for item in items:
+            table.delete_item(Key={"tenant_id": item["tenant_id"], "order_id": item["order_id"]})
+        print(f"Todos los datos eliminados de la tabla {table.table_name}.")
+    except ClientError as e:
+        print(f"Error al eliminar datos de la tabla {table.table_name}: {e.response['Error']['Message']}")
+
+# Eliminar datos previos de la tabla de órdenes
+delete_all_items(orders_table)
 
 # Generar user_info
 def generate_user_info():
@@ -167,4 +180,4 @@ for tenant_id, user_list in tenant_users.items():
 with open(output_file_orders, "w", encoding="utf-8") as outfile:
     json.dump(orders, outfile, ensure_ascii=False, indent=4, default=str)
 
-print(f"Órdenes generadas exitosamente. Guardadas en {output_file_orders} y subidas a DynamoDB.")
+print(f"{generated_orders} órdenes generadas exitosamente. Guardadas en {output_file_orders} y subidas a DynamoDB.")
