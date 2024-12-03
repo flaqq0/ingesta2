@@ -50,29 +50,29 @@ def delete_all_items(table):
 # Eliminar datos previos de la tabla de pagos
 delete_all_items(payments_table)
 
+# Generar método de pago
 def generate_payment_method():
-    payment_methods = ["TARJETA", "YAPE", "MERCADO PAGO", "PAYPAL", "PLIN", "TRANSFERENCIA BANCARIA", "GOOGLE PAY", "APPLE PAY", "BITCOIN", "QR"]
-    selected_method = random.choice(payment_methods)
-    
+    methods = ["TARJETA", "YAPE", "MERCADO PAGO", "PAYPAL", "PLIN"]
+    selected_method = random.choice(methods)
+
     if selected_method == "TARJETA":
         return {
             "metodo": "TARJETA",
             "card_number": fake.credit_card_number(),
-            "pin": random.randint(100, 999),
+            "pin": str(random.randint(100, 999)),
             "billing_address": fake.address(),
         }
     elif selected_method == "YAPE":
         return {
             "metodo": "YAPE",
             "telf_number": fake.phone_number(),
-            "code": random.randint(100000, 999999),
+            "code": str(random.randint(100000, 999999)),
         }
     elif selected_method == "MERCADO PAGO":
         return {
             "metodo": "MERCADO PAGO",
             "account_email": fake.email(),
             "transaction_token": "".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890", k=12)),
-            "payment_reference": f"REF{random.randint(100000, 999999)}",
         }
     elif selected_method == "PAYPAL":
         return {
@@ -86,40 +86,6 @@ def generate_payment_method():
             "telf_number": fake.phone_number(),
             "transaction_code": f"PLIN{random.randint(100000, 999999)}",
         }
-    elif selected_method == "TRANSFERENCIA BANCARIA":
-        return {
-            "metodo": "TRANSFERENCIA BANCARIA",
-            "bank_name": fake.company(),
-            "account_number": fake.bban(),
-            "transaction_id": f"TRX{random.randint(100000, 999999)}",
-            "swift_code": "SWIFT123",
-        }
-    elif selected_method == "GOOGLE PAY":
-        return {
-            "metodo": "GOOGLE PAY",
-            "google_pay_id": fake.uuid4(),
-            "transaction_token": "".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890", k=12)),
-        }
-    elif selected_method == "APPLE PAY":
-        return {
-            "metodo": "APPLE PAY",
-            "apple_pay_id": fake.uuid4(),
-            "device_token": "".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890", k=12)),
-        }
-    elif selected_method == "BITCOIN":
-        return {
-            "metodo": "BITCOIN",
-            "wallet_address": fake.uuid4(),
-            "transaction_hash": "".join(random.choices("0123456789abcdef", k=64)),
-            "amount_btc": round(random.uniform(0.001, 0.01), 8),
-        }
-    elif selected_method == "QR":
-        return {
-            "metodo": "QR",
-            "qr_code_reference": f"QR{random.randint(100000, 999999)}",
-            "transaction_id": f"TXN{random.randint(100000, 999999)}",
-        }
-
 
 # Obtener órdenes existentes
 orders = get_all_items(orders_table)
@@ -142,13 +108,12 @@ for (tenant_id, user_id), user_orders in users_orders.items():
         if generated_payments >= TOTAL_PAYMENTS:
             break
         if order.get("order_status") == "APPROVED PAYMENT":
-            print(f"Saltando orden {order['order_id']}: Ya tiene el estado 'APPROVED PAYMENT'.")
-            continue
+            continue  # Saltar órdenes ya pagadas
 
         try:
             order_id = order["order_id"]
-            fecha_pago = (datetime.fromisoformat(order["creation_date"]) + timedelta(days=random.randint(0, 2))).isoformat()  # Fecha de pago ajustada
-            total_price = Decimal(str(order["total_price"]))  # Convertir a Decimal
+            fecha_pago = (datetime.fromisoformat(order["creation_date"]) + timedelta(days=random.randint(0, 2))).isoformat()
+            total_price = Decimal(str(order["total_price"]))  # Convertir total_price a Decimal
 
             # Generar un pago_id único
             while True:
@@ -157,7 +122,7 @@ for (tenant_id, user_id), user_orders in users_orders.items():
                     generated_payment_ids.add(pago_id)
                     break
 
-            # Generar el método de pago
+            # Generar método de pago
             user_info = generate_payment_method()
 
             # Crear el pago
@@ -167,9 +132,9 @@ for (tenant_id, user_id), user_orders in users_orders.items():
                 "tu_id": f"{tenant_id}#{user_id}",
                 "order_id": order_id,
                 "user_id": user_id,
-                "total": total_price,  # Asegurarse de usar Decimal
+                "total": total_price,
                 "fecha_pago": fecha_pago,
-                "user_info": user_info,  # Método de pago generado
+                "user_info": user_info,
             }
 
             # Subir pago a DynamoDB
