@@ -9,7 +9,7 @@ LOG_FILE_PATH = "./logs/pull_inventory.log"
 logger.add(LOG_FILE_PATH, format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {message}", level="INFO", rotation="10 MB")
 
 # Variable global para definir el nombre de la tabla
-TABLE_NAME = "pf_inventarios"
+TABLE_NAME = "pf_inventario"
 REGION = "us-east-1"
 
 def export_table_to_csv_dynamodb(output_dir, table_name=TABLE_NAME):

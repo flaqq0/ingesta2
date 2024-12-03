@@ -6,7 +6,7 @@ from loguru import logger
 from datetime import datetime
 
 # Configuración del logger
-LOG_FILE_PATH = "./logs/load_inventory.log"
+LOG_FILE_PATH = "./logs/load_inventoryProd.log"
 logger.add(LOG_FILE_PATH, format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {message}", level="INFO", rotation="10 MB")
 
 # Variables globales
@@ -58,13 +58,13 @@ def ingest():
         return
 
     # Buscar el archivo productos.json en el directorio
-    file_path = os.path.join(BASE_DIRECTORY, "inventario.json")
+    file_path = os.path.join(BASE_DIRECTORY, "productos_inventarios.json")
     if not os.path.isfile(file_path):
-        logger.warning(f"No se encontró el archivo 'inventario.json' en '{BASE_DIRECTORY}'. Nada para subir.")
+        logger.warning(f"No se encontró el archivo 'productos_inventarios.json' en '{BASE_DIRECTORY}'. Nada para subir.")
         return
 
     # Subir archivo al bucket S3
-    s3_file_path = "inventario/inventarios.json"  # Ruta en el bucket S3
+    s3_file_path = "inventarioProd/productos_inventarios.json"  # Ruta en el bucket S3
     try:
         logger.info(f"Procesando archivo: {file_path}")
         upload_to_s3(file_path, BUCKET_NAME, s3_file_path)

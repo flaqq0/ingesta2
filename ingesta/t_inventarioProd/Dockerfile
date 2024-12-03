@@ -8,4 +8,4 @@ WORKDIR /usr/src/app
 
 COPY . .
 
-CMD ["bash", "-c", "python3 ./pull_inventarios.py && python3 ./load_inventarios.py"]
+CMD ["bash", "-c", "python3 ./pull_inventarioProd.py && python3 ./load_inventarioProd.py"]
