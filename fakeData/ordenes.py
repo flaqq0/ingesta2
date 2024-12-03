@@ -53,6 +53,8 @@ def delete_all_items(table):
 # Eliminar datos previos de la tabla de órdenes
 delete_all_items(orders_table)
 
+'''
+
 # Generar user_info
 def generate_user_info():
     return {
@@ -188,3 +190,4 @@ with open(output_file_orders, "w", encoding="utf-8") as outfile:
     json.dump(orders, outfile, ensure_ascii=False, indent=4, default=str)
 
 print(f"{generated_orders} órdenes generadas exitosamente. Guardadas en {output_file_orders} y subidas a DynamoDB.")
+'''
