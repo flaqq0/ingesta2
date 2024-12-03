@@ -24,7 +24,7 @@ logger.add(
 '''
 # Variables globales
 BASE_DIRECTORY = "./exported_data"
-BUCKET_NAME = "aproyecto-prod"
+BUCKET_NAME = "aproyecto-test"
 
 # Conexión a S3
 s3 = boto3.client("s3")
