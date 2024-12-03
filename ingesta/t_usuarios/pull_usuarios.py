@@ -37,7 +37,7 @@ def export_table_to_csv_dynamodb(output_dir, table_name=TABLE_NAME):
         dynamodb = boto3.client("dynamodb", region_name=REGION)
 
         # Crear directorio de salida si no existe
-        output_dir = f"./{output_dir}-{table_name}"
+        output_dir = f"./{output_dir}"
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
             logger.info(f"Directorio creado: {output_dir}")
