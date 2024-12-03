@@ -6,11 +6,25 @@ from datetime import datetime
 
 # Configuración de logger con milisegundos
 LOG_FILE_PATH = "./logs/pull_inventarios.log"
-logger.add(
-    LOG_FILE_PATH,
-    format="{time:2024-11-30 HH:mm:ss.SSS} | {level} | {message}",
-    level="INFO",
-    rotation="10 MB",
+CUSTOM_DATE = "2024-11-30"
+class CustomDate:
+    def __init__(self, fixed_date):
+        self.fixed_date = datetime.strptime(fixed_date, "%Y-%m-%d")
+
+    def __call__(self):
+        return self.fixed_date
+
+logger.configure(
+    handlers=[
+        {
+            "sink": LOG_FILE_PATH,
+            "format": "{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {message}",
+            "level": "INFO",
+            "enqueue": True,
+            "rotation": "10 MB",
+            "time_function": CustomDate(CUSTOM_DATE),
+        }
+    ]
 )
 
 # Variable global para definir el nombre de la tabla
