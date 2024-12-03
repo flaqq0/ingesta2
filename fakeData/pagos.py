@@ -125,6 +125,11 @@ for (tenant_id, user_id), user_orders in users_orders.items():
             # Generar método de pago
             user_info = generate_payment_method()
 
+            # Convertir posibles valores flotantes en user_info a Decimal si aplica
+            for key, value in user_info.items():
+                if isinstance(value, float):
+                    user_info[key] = Decimal(str(value))
+
             # Crear el pago
             payment = {
                 "tenant_id": tenant_id,
