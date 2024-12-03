@@ -20,24 +20,6 @@ region_name = "us-east-1"  # Cambia esta región según tu configuración
 dynamodb = boto3.resource("dynamodb", region_name=region_name)
 table = dynamodb.Table("pf_inventarios")  # Cambia por el nombre de tu tabla DynamoDB
 
-# Función para borrar todos los elementos de la tabla
-def clear_table(table_name):
-    try:
-        client = boto3.client("dynamodb", region_name=region_name)
-        paginator = client.get_paginator("scan")
-        response_iterator = paginator.paginate(TableName=table_name)
-        for page in response_iterator:
-            for item in page.get("Items", []):
-                key = {k: v for k, v in item.items() if k in ["tenant_id", "inventory_id"]}
-                client.delete_item(TableName=table_name, Key=key)
-                print(f"Eliminado: {key}")
-        print(f"Todos los elementos de la tabla '{table_name}' han sido eliminados.")
-    except ClientError as e:
-        print(f"Error al limpiar la tabla '{table_name}': {e.response['Error']['Message']}")
-
-# Borrar datos existentes en la tabla
-clear_table("pf_inventarios")
-
 # Función para generar un stock aleatorio
 def random_stock():
     return random.randint(50, 10000)
