@@ -18,12 +18,13 @@ orders_table = dynamodb.Table("pf_ordenes")
 inventory_table = dynamodb.Table("pf_inventarios")
 inventario_producto_table = dynamodb.Table("pf_inventario")
 users_table = dynamodb.Table("pf_usuarios")
+products_table = dynamodb.Table("pf_productos")
 
 # Salida
 output_file_orders = "ordenes.json"
 
 # Parámetro global para limitar órdenes
-TOTAL_ORDERS = 12000  # Cambia este valor para ajustar el número total de órdenes
+TOTAL_ORDERS = 12000
 generated_orders = 0  # Contador de órdenes generadas
 
 # Función para obtener todos los registros de una tabla DynamoDB
@@ -40,23 +41,17 @@ def get_all_items(table):
     return items
 
 # Función para eliminar todos los datos de una tabla DynamoDB
-def delete_all_items_and_remove_inventory_ids(table):
+def delete_all_items(table):
     try:
         items = get_all_items(table)
         for item in items:
-            # Actualizar el elemento para eliminar el campo "inventory_ids"
-            table.update_item(
-                Key={"tenant_id": item["tenant_id"], "order_id": item["order_id"]},
-                UpdateExpression="REMOVE inventory_ids",
-            )
-            # Eliminar el elemento de la tabla
             table.delete_item(Key={"tenant_id": item["tenant_id"], "order_id": item["order_id"]})
-        print(f"Todos los datos eliminados de la tabla {table.table_name} y 'inventory_ids' removido.")
+        print(f"Todos los datos eliminados de la tabla {table.table_name}.")
     except ClientError as e:
         print(f"Error al eliminar datos de la tabla {table.table_name}: {e.response['Error']['Message']}")
 
-# Eliminar datos previos de la tabla de órdenes y el campo "inventory_ids"
-delete_all_items_and_remove_inventory_ids(orders_table)
+# Eliminar datos previos de la tabla de órdenes
+delete_all_items(orders_table)
 
 # Generar user_info
 def generate_user_info():
@@ -69,8 +64,8 @@ def generate_user_info():
 
 # Generar fecha de creación aleatoria (no hoy)
 def generate_creation_date():
-    start_date = datetime.now() - timedelta(days=365)  # Hace un año
-    random_days = random.randint(0, 364)  # Excluye hoy
+    start_date = datetime.now() - timedelta(days=365)
+    random_days = random.randint(0, 364)
     return (start_date + timedelta(days=random_days)).isoformat()
 
 # Obtener inventarios, inventario-producto y usuarios existentes
@@ -106,7 +101,7 @@ generated_order_ids = set()
 orders = []
 
 for tenant_id, user_list in tenant_users.items():
-    if generated_orders >= TOTAL_ORDERS:  # Detener si ya se alcanzó el límite global
+    if generated_orders >= TOTAL_ORDERS:
         break
 
     tenant_inv_list = tenant_inventarios.get(tenant_id, [])
@@ -133,18 +128,24 @@ for tenant_id, user_list in tenant_users.items():
         ]
 
         if not productos_filtrados:
-            continue  # Saltar si no hay productos para este inventario
+            continue
 
         # Generar una orden
         try:
-            product_list = [
-                {
-                    "product_id": producto["product_id"],
-                    "quantity": random.randint(1, 5),  # Cantidad aleatoria entre 1 y 5
-                    "price": Decimal(producto.get("price", 0))
-                }
-                for producto in random.sample(productos_filtrados, k=random.randint(1, min(3, len(productos_filtrados))))
-            ]
+            product_list = []
+            for producto in random.sample(productos_filtrados, k=min(3, len(productos_filtrados))):
+                # Obtener precio desde la tabla de productos
+                product_details = products_table.get_item(
+                    Key={"tenant_id": tenant_id, "product_id": producto["product_id"]}
+                )
+                product_price = Decimal(product_details.get("Item", {}).get("product_price", 0))
+                product_list.append(
+                    {
+                        "product_id": producto["product_id"],
+                        "quantity": random.randint(1, 5),
+                        "price": product_price,
+                    }
+                )
 
             total_price = sum(p["price"] * p["quantity"] for p in product_list)
 
