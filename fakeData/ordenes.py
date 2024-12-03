@@ -40,6 +40,7 @@ def get_all_items(table):
         print(f"Error al obtener datos de la tabla {table.table_name}: {e.response['Error']['Message']}")
     return items
 
+'''
 # Función para eliminar todos los datos de una tabla DynamoDB
 def delete_all_items(table):
     try:
@@ -52,6 +53,7 @@ def delete_all_items(table):
 
 # Eliminar datos previos de la tabla de órdenes
 delete_all_items(orders_table)
+'''
 
 # Generar user_info
 def generate_user_info():

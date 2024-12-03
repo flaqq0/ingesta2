@@ -21,7 +21,7 @@ payments_table = dynamodb.Table("pf_pagos")
 output_file_payments = "pagos.json"
 
 # Parámetro global para limitar pagos
-TOTAL_PAYMENTS = 20  # Número máximo de pagos
+TOTAL_PAYMENTS = 11000  # Número máximo de pagos
 generated_payments = 0
 
 # Función para obtener todos los registros de una tabla DynamoDB
@@ -37,6 +37,7 @@ def get_all_items(table):
         print(f"Error al obtener datos de la tabla {table.table_name}: {e.response['Error']['Message']}")
     return items
 
+'''
 # Función para eliminar todos los datos de una tabla DynamoDB
 def delete_all_items(table):
     try:
@@ -49,6 +50,7 @@ def delete_all_items(table):
 
 # Eliminar datos previos de la tabla de pagos
 delete_all_items(payments_table)
+'''
 
 # Generar método de pago
 def generate_payment_method():
