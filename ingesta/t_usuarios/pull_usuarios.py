@@ -16,9 +16,10 @@ logger.add(
 )
 logger.add(
     lambda msg: print(msg.strip()),  # Usar un sink que imprima en consola
-    format=f"{CUSTOM_DATE} {{time:HH:mm:ss.SSS}} | {{level}} | {{message}}",
+    format=f"<green>{CUSTOM_DATE}</green> <cyan>{{time:HH:mm:ss.SSS}}</cyan> | <level>{{level}}</level> | {{message}}",
     level="INFO"
 )
+
 # Variable global para definir el nombre de la tabla
 TABLE_NAME = "pf_usuarios"
 REGION = "us-east-1"
