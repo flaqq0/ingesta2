@@ -15,14 +15,16 @@ dynamodb = boto3.resource("dynamodb", region_name=region_name)
 
 # Tablas DynamoDB
 orders_table = dynamodb.Table("pf_ordenes")
-inventory_table = dynamodb.Table("pf_inventario")
-products_table = dynamodb.Table("pf_productos")
+inventory_table = dynamodb.Table("pf_inventarios")
+inventario_producto_table = dynamodb.Table("pf_inventario")
 users_table = dynamodb.Table("pf_usuarios")
 
+# Salida
 output_file_orders = "ordenes.json"
 
 # Parámetro global para limitar órdenes
-TOTAL_ORDERS = 15000
+TOTAL_ORDERS = 20  # Cambia este valor para ajustar el número total de órdenes
+generated_orders = 0  # Contador de órdenes generadas
 
 # Obtener todos los registros de una tabla DynamoDB
 def get_all_items(table):
@@ -52,116 +54,117 @@ def generate_creation_date():
     random_days = random.randint(0, 364)  # Excluye hoy
     return (start_date + timedelta(days=random_days)).isoformat()
 
-# Obtener inventarios, productos y usuarios existentes
+# Obtener inventarios, inventario-producto y usuarios existentes
 inventarios = get_all_items(inventory_table)
-productos = get_all_items(products_table)
+inventario_producto = get_all_items(inventario_producto_table)
 usuarios = get_all_items(users_table)
 
-# Validación de datos
-if not usuarios or not inventarios or not productos:
-    print("No hay datos suficientes en DynamoDB para generar órdenes.")
-    exit(1)
+# Agrupar inventarios y productos por tenant_id
+tenant_inventarios = {}
+tenant_inventario_producto = {}
+tenant_users = {}
 
-# Crear mapeo de inventarios a productos
-inventory_product_map = {}
 for inv in inventarios:
     tenant_id = inv["tenant_id"]
-    product_id = inv["product_id"]
-    inventory_id = inv["inventory_id"]
-    if tenant_id not in inventory_product_map:
-        inventory_product_map[tenant_id] = {}
-    if inventory_id not in inventory_product_map[tenant_id]:
-        inventory_product_map[tenant_id][inventory_id] = []
-    inventory_product_map[tenant_id][inventory_id].append(product_id)
+    if tenant_id not in tenant_inventarios:
+        tenant_inventarios[tenant_id] = []
+    tenant_inventarios[tenant_id].append(inv)
 
-# Generar exactamente 20 órdenes
-generated_orders = []
+for ip in inventario_producto:
+    tenant_id = ip["tenant_id"]
+    if tenant_id not in tenant_inventario_producto:
+        tenant_inventario_producto[tenant_id] = []
+    tenant_inventario_producto[tenant_id].append(ip)
+
+for user in usuarios:
+    tenant_id = user["tenant_id"]
+    if tenant_id not in tenant_users:
+        tenant_users[tenant_id] = []
+    tenant_users[tenant_id].append(user)
+
+# Generar órdenes
 generated_order_ids = set()
+orders = []
 
-for _ in range(TOTAL_ORDERS):
-    # Seleccionar usuario aleatorio
-    usuario = random.choice(usuarios)
-    tenant_id = usuario["tenant_id"]
-    user_id = usuario["user_id"]
-    user_info = generate_user_info()
+for tenant_id, user_list in tenant_users.items():
+    if generated_orders >= TOTAL_ORDERS:  # Detener si ya se alcanzó el límite global
+        break
 
-    # Obtener inventarios válidos para el tenant_id del usuario
-    tenant_inventories = inventory_product_map.get(tenant_id, {})
+    tenant_inv_list = tenant_inventarios.get(tenant_id, [])
+    tenant_ip_list = tenant_inventario_producto.get(tenant_id, [])
 
-    if not tenant_inventories:
-        print(f"Saltando usuario {user_id}: No hay inventarios válidos para tenant_id {tenant_id}")
+    if not tenant_inv_list or not tenant_ip_list:
+        print(f"Saltando tenant_id '{tenant_id}' porque no tiene inventarios o productos disponibles.")
         continue
 
-    try:
-        # Seleccionar aleatoriamente entre 1 y 3 inventarios
-        selected_inventory_ids = random.sample(list(tenant_inventories.keys()), k=random.randint(1, min(5, len(tenant_inventories))))
-        selected_products = []
+    for user in user_list:
+        if generated_orders >= TOTAL_ORDERS:
+            break
 
-        # Agregar productos de cada inventario seleccionado
-        for inventory_id in selected_inventory_ids:
-            valid_products = [
-                prod for prod in productos
-                if prod["product_id"] in tenant_inventories[inventory_id] and prod["tenant_id"] == tenant_id
-            ]
-            if valid_products:
-                # Seleccionar entre 1 y 3 productos de este inventario
-                selected_products += random.sample(valid_products, k=random.randint(1, min(3, len(valid_products))))
+        user_id = user["user_id"]
+        user_info = generate_user_info()
 
-        # Validar si hay productos seleccionados
-        if not selected_products:
-            print(f"Saltando orden para usuario {user_id}: No se seleccionaron productos válidos.")
-            continue
+        # Seleccionar un inventario aleatorio
+        inventario = random.choice(tenant_inv_list)
+        inventory_id = inventario["inventory_id"]
 
-        # Generar un order_id único
-        while True:
-            order_id = f"order_{random.randint(1000, 99999)}"
-            if order_id not in generated_order_ids:
-                generated_order_ids.add(order_id)
-                break
-
-        # Generar datos para la orden
-        creation_date = generate_creation_date()
-        shipping_date = (datetime.fromisoformat(creation_date) + timedelta(days=7)).isoformat()
-
-        # Crear lista de productos
-        product_list = [
-            {
-                "product_id": producto["product_id"],
-                "quantity": random.randint(1, 5),  # Cantidad aleatoria entre 1 y 5
-                "product_price": Decimal(str(producto["product_price"])),  # Obtener precio real
-            }
-            for producto in selected_products
+        # Filtrar productos que pertenecen al inventario seleccionado
+        productos_filtrados = [
+            ip for ip in tenant_ip_list if ip["inventory_id"] == inventory_id
         ]
 
-        # Calcular el precio total
-        total_price = sum(
-            product["product_price"] * Decimal(product["quantity"])
-            for product in product_list
-        )
+        if not productos_filtrados:
+            continue  # Saltar si no hay productos para este inventario
 
-        order = {
-            "tenant_id": tenant_id,
-            "order_id": order_id,
-            "tu_id": f"{tenant_id}#{user_id}",
-            "user_id": user_id,
-            "user_info": user_info,
-            "inventory_ids": selected_inventory_ids,  # Lista de todos los inventory_id usados
-            "creation_date": creation_date,
-            "shipping_date": shipping_date,
-            "order_status": "PENDING",
-            "products": product_list,
-            "total_price": Decimal(str(total_price)),
-        }
+        # Generar una orden
+        try:
+            product_list = [
+                {
+                    "product_id": producto["product_id"],
+                    "quantity": random.randint(1, 5),  # Cantidad aleatoria entre 1 y 5
+                    "price": Decimal(producto.get("price", 0))
+                }
+                for producto in random.sample(productos_filtrados, k=random.randint(1, min(3, len(productos_filtrados))))
+            ]
 
-        # Subir orden a DynamoDB
-        orders_table.put_item(Item=order)
-        generated_orders.append(order)
+            total_price = sum(p["price"] * p["quantity"] for p in product_list)
 
-    except ClientError as e:
-        print(f"Error al insertar en la tabla pf_ordenes: {e.response['Error']['Message']}")
+            # Generar un order_id único
+            while True:
+                order_id = f"order_{random.randint(1000, 99999)}"
+                if order_id not in generated_order_ids:
+                    generated_order_ids.add(order_id)
+                    break
+
+            creation_date = generate_creation_date()
+            shipping_date = (datetime.fromisoformat(creation_date) + timedelta(days=7)).isoformat()
+
+            order = {
+                "tenant_id": tenant_id,
+                "order_id": order_id,
+                "tu_id": f"{tenant_id}#{user_id}",
+                "user_id": user_id,
+                "user_info": user_info,
+                "inventory_ids": [inventory_id],
+                "creation_date": creation_date,
+                "shipping_date": shipping_date,
+                "order_status": "PENDING",
+                "products": product_list,
+                "total_price": Decimal(str(total_price)),
+            }
+
+            # Subir orden a DynamoDB
+            orders_table.put_item(Item=order)
+
+            # Agregar al archivo JSON
+            orders.append(order)
+            generated_orders += 1
+
+        except ClientError as e:
+            print(f"Error al insertar en la tabla pf_ordenes: {e.response['Error']['Message']}")
 
 # Guardar en archivo JSON
 with open(output_file_orders, "w", encoding="utf-8") as outfile:
-    json.dump(generated_orders, outfile, ensure_ascii=False, indent=4, default=float)
+    json.dump(orders, outfile, ensure_ascii=False, indent=4, default=str)
 
-print(f"{len(generated_orders)} órdenes generadas exitosamente. Guardadas en {output_file_orders} y subidas a DynamoDB.")
+print(f"Órdenes generadas exitosamente. Guardadas en {output_file_orders} y subidas a DynamoDB.")
