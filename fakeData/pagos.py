@@ -141,20 +141,15 @@ for (tenant_id, user_id), user_orders in users_orders.items():
     for order in user_orders:
         if generated_payments >= TOTAL_PAYMENTS:
             break
-
-        # Verificar si la orden ya tiene el estado "APPROVED PAYMENT"
         if order.get("order_status") == "APPROVED PAYMENT":
             print(f"Saltando orden {order['order_id']}: Ya tiene el estado 'APPROVED PAYMENT'.")
             continue
 
         try:
             order_id = order["order_id"]
-            total_price = Decimal(str(order["total_price"]))
-            creation_date = datetime.fromisoformat(order["creation_date"])
-
-            # Generar fecha de pago (máximo 2 días después de la creación)
-            fecha_pago = creation_date + timedelta(days=random.randint(0, 2))
-            fecha_pago_iso = fecha_pago.isoformat()
+            user_info = order["user_info"]
+            fecha_pago = (datetime.fromisoformat(order["creation_date"]) + timedelta(days=random.randint(0, 2))).isoformat()  # Fecha de pago ajustada
+            total_price = Decimal(str(order["total_price"]))  # Convertir a Decimal
 
             # Generar un pago_id único
             while True:
@@ -163,21 +158,22 @@ for (tenant_id, user_id), user_orders in users_orders.items():
                     generated_payment_ids.add(pago_id)
                     break
 
-            # Crear datos de pago
+            # Crear el pago
             payment = {
                 "tenant_id": tenant_id,
                 "pago_id": pago_id,
+                "tu_id": f"{tenant_id}#{user_id}",
                 "order_id": order_id,
                 "user_id": user_id,
-                "user_info": generate_payment_method(),
-                "total": total_price,
-                "fecha_pago": fecha_pago_iso,
+                "total": total_price,  # Asegurarse de usar Decimal
+                "fecha_pago": fecha_pago,
+                "user_info": user_info,
             }
 
             # Subir pago a DynamoDB
             payments_table.put_item(Item=payment)
 
-            # Actualizar el estado de la orden a "APPROVED PAYMENT"
+            # Actualizar el estado de la orden a 'APPROVED PAYMENT'
             orders_table.update_item(
                 Key={"tenant_id": tenant_id, "order_id": order_id},
                 UpdateExpression="SET order_status = :status",
@@ -190,6 +186,7 @@ for (tenant_id, user_id), user_orders in users_orders.items():
 
         except ClientError as e:
             print(f"Error al insertar en la tabla pf_pagos: {e.response['Error']['Message']}")
+
 
 # Guardar en archivo JSON
 with open(output_file_payments, "w", encoding="utf-8") as outfile:
