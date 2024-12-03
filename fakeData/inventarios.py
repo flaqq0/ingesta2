@@ -1,5 +1,6 @@
 import json
 import random
+import csv
 from faker import Faker
 import boto3
 from botocore.exceptions import ClientError
@@ -19,48 +20,181 @@ region_name = "us-east-1"  # Cambia esta región según tu configuración
 dynamodb = boto3.resource("dynamodb", region_name=region_name)
 table = dynamodb.Table("pf_inventarios")  # Cambia por el nombre de tu tabla DynamoDB
 
+# Función para borrar todos los elementos de la tabla
+def clear_table(table_name):
+    try:
+        client = boto3.client("dynamodb", region_name=region_name)
+        paginator = client.get_paginator("scan")
+        response_iterator = paginator.paginate(TableName=table_name)
+        for page in response_iterator:
+            for item in page.get("Items", []):
+                key = {k: v for k, v in item.items() if k in ["tenant_id", "inventory_id"]}
+                client.delete_item(TableName=table_name, Key=key)
+                print(f"Eliminado: {key}")
+        print(f"Todos los elementos de la tabla '{table_name}' han sido eliminados.")
+    except ClientError as e:
+        print(f"Error al limpiar la tabla '{table_name}': {e.response['Error']['Message']}")
+
+# Borrar datos existentes en la tabla
+clear_table("pf_inventarios")
+
 # Función para generar un stock aleatorio
 def random_stock():
     return random.randint(50, 10000)
 
 # Función para generar observaciones aleatorias
 def random_observations():
-    return fake.sentence(nb_words=6)
+    return fake.sentence(nb_words=20)
+
+# Leer datos del archivo Pere.csv
+def load_peru_locations(file_path):
+    locations = []
+    with open(file_path, mode="r", encoding="utf-8") as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader)  # Saltar la cabecera
+        for row in reader:
+            departamento = row[0].strip()
+            distrito = row[2].strip()
+            locations.append(f"{departamento}-{distrito}")
+    return locations
+
+peru_locations = load_peru_locations("Pere.csv")
+unique_peru_locations = list(set(peru_locations))  # Eliminar duplicados
 
 # Generar inventarios
 generated_inventory_ids = set()
 inventories = []
 
-for _ in range(4000):  # Generar 500 inventarios
-    tenant_id = tenants
+# Inventarios para plazavea
+for i in range(10): #inventarios a crear
+    tenant_id = "plazavea"
+    inventory_name = random.choice(unique_peru_locations)
 
-    # Generar un inventory_id único
     while True:
-        inventory_id = f"inventory_{random.randint(12, 99999)}"
+        inventory_id = f"inventory_{random.randint(1, 5500)}"
         if inventory_id not in generated_inventory_ids:
             generated_inventory_ids.add(inventory_id)
             break
-
-    inventory_name = fake.company()
-    stock = random_stock()
-    observations = random_observations()
 
     inventory = {
         "tenant_id": tenant_id,
         "inventory_id": inventory_id,
         "inventory_name": inventory_name,
-        "stock": stock,
-        "observations": observations
+        "stock": random_stock(),
+        "observations": random_observations(),
     }
     inventories.append(inventory)
 
-    # Subir cada inventario a DynamoDB
+# Inventarios adicionales de plazavea (en otros países)
+for i in range(15): # inventarios a crear
+    tenant_id = "plazavea"
+    inventory_name = f"{fake.state()}-{fake.city()}"
+
+    while True:
+        inventory_id = f"inventory_{random.randint(5501, 10600)}"
+        if inventory_id not in generated_inventory_ids:
+            generated_inventory_ids.add(inventory_id)
+            break
+
+    inventory = {
+        "tenant_id": tenant_id,
+        "inventory_id": inventory_id,
+        "inventory_name": inventory_name,
+        "stock": random_stock(),
+        "observations": random_observations(),
+    }
+    inventories.append(inventory)
+
+# Inventarios para wong
+for i in range(18): #inventarios a crear
+    tenant_id = "wong"
+    inventory_name = unique_peru_locations[i]
+
+    while True:
+        inventory_id = f"inventory_{random.randint(10601, 16101)}"
+        if inventory_id not in generated_inventory_ids:
+            generated_inventory_ids.add(inventory_id)
+            break
+
+    inventory = {
+        "tenant_id": tenant_id,
+        "inventory_id": inventory_id,
+        "inventory_name": inventory_name,
+        "stock": random_stock(),
+        "observations": random_observations(),
+    }
+    inventories.append(inventory)
+
+# Inventarios adicionales de wong (en otros países)
+for i in range(12): #inventarios a crear
+    tenant_id = "wong"
+    inventory_name = f"{fake.state()}-{fake.city()}"
+
+    while True:
+        inventory_id = f"inventory_{random.randint(16101, 21601)}"
+        if inventory_id not in generated_inventory_ids:
+            generated_inventory_ids.add(inventory_id)
+            break
+
+    inventory = {
+        "tenant_id": tenant_id,
+        "inventory_id": inventory_id,
+        "inventory_name": inventory_name,
+        "stock": random_stock(),
+        "observations": random_observations(),
+    }
+    inventories.append(inventory)
+
+# Inventarios para uwu (en provincias específicas)
+provincias_lima = [loc for loc in unique_peru_locations if "Lima-" in loc]
+provincias_arequipa = [loc for loc in unique_peru_locations if "Arequipa-" in loc]
+
+for loc in provincias_lima + provincias_arequipa:
+    tenant_id = "uwu"
+    while True:
+        inventory_id = f"inventory_{random.randint(21602, 27101)}"
+        if inventory_id not in generated_inventory_ids:
+            generated_inventory_ids.add(inventory_id)
+            break
+
+    inventory = {
+        "tenant_id": tenant_id,
+        "inventory_id": inventory_id,
+        "inventory_name": loc,
+        "stock": random_stock(),
+        "observations": random_observations(),
+    }
+    inventories.append(inventory)
+
+# Inventarios adicionales de uwu (en Estados Unidos, Reino Unido y España)
+for i in range(15): #inventarios a crear
+    tenant_id = "uwu"
+    country = random.choice(["United States", "United Kingdom", "Spain"])
+    inventory_name = f"{country}-{fake.city()}"
+
+    while True:
+        inventory_id = f"inventory_{random.randint(27102, 32601)}"
+        if inventory_id not in generated_inventory_ids:
+            generated_inventory_ids.add(inventory_id)
+            break
+
+    inventory = {
+        "tenant_id": tenant_id,
+        "inventory_id": inventory_id,
+        "inventory_name": inventory_name,
+        "stock": random_stock(),
+        "observations": random_observations(),
+    }
+    inventories.append(inventory)
+
+# Subir inventarios a DynamoDB
+for inventory in inventories:
     try:
         table.put_item(Item=inventory)
     except ClientError as e:
-        print(f"Error al agregar inventario {inventory_id}: {e.response['Error']['Message']}")
+        print(f"Error al agregar inventario {inventory['inventory_id']}: {e.response['Error']['Message']}")
 
-# Guardar en inventarios.json
+# Guardar inventarios en archivo JSON
 with open(output_file_inventories, "w", encoding="utf-8") as outfile:
     json.dump(inventories, outfile, ensure_ascii=False, indent=4)
 
