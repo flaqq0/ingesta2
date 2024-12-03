@@ -8,17 +8,11 @@ from datetime import datetime
 # Configuración del logger
 LOG_FILE_PATH = "./logs/load_usuarios.log"
 CUSTOM_DATE = "2024-11-30"
-logger.remove()
 logger.add(
     LOG_FILE_PATH,
     format=f"{CUSTOM_DATE} {{time:HH:mm:ss.SSS}} | {{level}} | {{message}}",
     level="INFO",
     rotation="10 MB"
-)
-logger.add(
-    lambda msg: print(msg.strip()),  # Usar un sink que imprima en consola
-    format=f"{CUSTOM_DATE} {{time:HH:mm:ss.SSS}} | {{level}} | {{message}}",
-    level="INFO"
 )
 
 # Variables globales
