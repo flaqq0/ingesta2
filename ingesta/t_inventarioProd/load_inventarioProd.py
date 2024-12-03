@@ -1,16 +1,15 @@
 import os
-import json
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 from loguru import logger
 from datetime import datetime
 
-# Configuración del logger
+# Configuración de logger
 LOG_FILE_PATH = "./logs/load_inventoryProd.log"
 logger.add(LOG_FILE_PATH, format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level} | {message}", level="INFO", rotation="10 MB")
 
 # Variables globales
-BASE_DIRECTORY = "../../fakeData"  # Directorio base donde se encuentran los archivos locales
+BASE_DIRECTORY = "./exported_data"  # Directorio base donde se encuentran los archivos locales
 BUCKET_NAME = "aproyecto-dev"  # Bucket S3 donde se subirán los datos
 
 # Conexión a S3
@@ -52,19 +51,19 @@ def ingest():
     start_time = datetime.now()
     processed_files = 0
 
-    # Verificar si el directorio BASE_DIRECTORY existe y contiene archivos
+    # Verificar si el directorio BASE_DIRECTORY existe
     if not os.path.exists(BASE_DIRECTORY):
         logger.error(f"El directorio '{BASE_DIRECTORY}' no existe. Abortando ingesta.")
         return
 
-    # Buscar el archivo productos.json en el directorio
-    file_path = os.path.join(BASE_DIRECTORY, "productos_inventarios.json")
+    # Buscar el archivo JSON en el directorio
+    file_path = os.path.join(BASE_DIRECTORY, "pf_inventario.json")
     if not os.path.isfile(file_path):
-        logger.warning(f"No se encontró el archivo 'productos_inventarios.json' en '{BASE_DIRECTORY}'. Nada para subir.")
+        logger.warning(f"No se encontró el archivo 'pf_inventario.json' en '{BASE_DIRECTORY}'. Nada para subir.")
         return
 
     # Subir archivo al bucket S3
-    s3_file_path = "inventarioProd/productos_inventarios.json"  # Ruta en el bucket S3
+    s3_file_path = "inventarioProd/pf_inventario.json"  # Ruta en el bucket S3
     try:
         logger.info(f"Procesando archivo: {file_path}")
         upload_to_s3(file_path, BUCKET_NAME, s3_file_path)
