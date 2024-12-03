@@ -7,8 +7,12 @@ from datetime import datetime
 
 # Configuración del logger
 LOG_FILE_PATH = "./logs/load_usuarios.log"
-logger.add(LOG_FILE_PATH, format="{time:2024-11-30 HH:mm:ss.SSS} | {level} | {message}", level="INFO", rotation="10 MB")
-
+logger.add(
+    LOG_FILE_PATH,
+    format="{time:2024-11-30 HH:mm:ss.SSS} | {level} | {message}",
+    level="INFO",
+    rotation="10 MB",
+)
 # Variables globales
 BASE_DIRECTORY = "./exported_data"
 BUCKET_NAME = "aproyecto-dev"
@@ -51,18 +55,25 @@ def ingest():
         logger.error(f"El directorio '{BASE_DIRECTORY}' no existe. Abortando ingesta.")
         return
 
-    file_path = os.path.join(BASE_DIRECTORY, "usuarios.json")
+    file_path = os.path.join(BASE_DIRECTORY, "pf_usuarios.json")
     if not os.path.isfile(file_path):
-        logger.warning(f"No se encontró el archivo 'usuarios.json' en '{BASE_DIRECTORY}'. Nada para subir.")
+        logger.warning(f"No se encontró el archivo 'pf_usuarios.json' en '{BASE_DIRECTORY}'. Nada para subir.")
         return
+    
+    file_size = os.path.getsize(file_path) / 1024  # Tamaño en KB
+    logger.info(f"Archivo '{file_path}' encontrado. Tamaño: {file_size:.2f} KB.")
 
-    s3_file_path = "usuarios/usuarios.json"
+    s3_file_path = "usuarios/pf_usuarios.json"
     try:
-        logger.info(f"Procesando archivo: {file_path}")
+        logger.info(f"Subiendo archivo '{file_path}' al bucket S3 en la ruta '{s3_file_path}'.")
+        upload_start_time = datetime.now()
         upload_to_s3(file_path, BUCKET_NAME, s3_file_path)
+        upload_end_time = datetime.now()
+        upload_duration = upload_end_time - upload_start_time
+        logger.info(f"Archivo '{file_path}' subido exitosamente en {upload_duration.seconds} segundos.")
         processed_files += 1
     except Exception as e:
-        logger.error(f"Error al procesar el archivo '{file_path}': {str(e)}")
+        logger.error(f"Error durante el procesamiento del archivo '{file_path}': {str(e)}")
 
     end_time = datetime.now()
     logger.success(f"Ingesta completada. Tiempo total: {end_time - start_time}. Archivos procesados: {processed_files}")
