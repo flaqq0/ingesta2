@@ -14,7 +14,7 @@ logger.add(
 )
 
 # Variable global para definir el nombre de la tabla
-TABLE_NAME = "pf_inventario"
+TABLE_NAME = "pf_inventarioprod"
 REGION = "us-east-1"
 
 def export_table_to_json_dynamodb(output_dir, table_name=TABLE_NAME):

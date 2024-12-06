@@ -11,7 +11,7 @@ dynamodb = boto3.resource("dynamodb", region_name=region_name)
 # Tablas DynamoDB
 inventarios_table = dynamodb.Table("pf_inventarios")
 productos_table = dynamodb.Table("pf_productos")
-inventario_producto_table = dynamodb.Table("pf_inventario")  # Tabla donde se insertan los datos generados
+inventario_producto_table = dynamodb.Table("pf_inventarioprod")  # Tabla donde se insertan los datos generados
 
 # Salida
 output_file = "productos_inventarios.json"
