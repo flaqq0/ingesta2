@@ -16,7 +16,7 @@ dynamodb = boto3.resource("dynamodb", region_name=region_name)
 # Tablas DynamoDB
 orders_table = dynamodb.Table("pf_ordenes")
 inventory_table = dynamodb.Table("pf_inventarios")
-inventario_producto_table = dynamodb.Table("pf_inventario")
+inventario_producto_table = dynamodb.Table("pf_inventarioprod")
 users_table = dynamodb.Table("pf_usuarios")
 products_table = dynamodb.Table("pf_productos")
 
