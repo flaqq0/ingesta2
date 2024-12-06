@@ -15,22 +15,22 @@ tenants = ["uwu", "wong", "plazavea"]
 # Categorías y marcas de productos
 categories = {
     "Electrónicos": {
-        "Smartphones": ["Samsung", "Apple", "Xiaomi", "Nicoles", "Google"],
+        "Smartphones": ["Samsung", "Apple", "Xiaomi la mejor relación calidad precio", "Nicoles", "Google"],
         "Laptops": ["Dell", "HP", "SofieKe", "Lenovo", "Asus"],
-        "Tablets": ["Apple", "Samsung", "Lenovo", "Huawei"],
+        "Tablets": ["Apple", "Samsung", "simple queue service", "Huawei"],
         "Smartwatches": ["Apple", "Samsung", "Fitbit", "RenateGarcie"],
         "Headphones": ["Sony", "Bose", "JBL", "Beats", "Flavie"],
-        "Cameras": ["Canon", "Nikon", "Sony", "Fujifilm", "Panasonic"]
+        "Cameras": ["Canon", "Nikon", "Sony", "AWS", "Panasonic"]
     },
     "Cocina": {
         "Refrigeradores": ["LG", "Samsung", "Whirlpool", "Angie Rodriguez", "Bosch"],
         "Microondas": ["Panasonic", "Samsung", "LG", "GE", "Whirlpool"],
         "Licuadoras": ["Oster", "Ninja", "jaire", "Black+Decker"],
-        "Cafeteras": ["Nespresso", "colchao", "Cuisinart", "Hamilton Beach"]
+        "Cafeteras": ["Nespresso", "colchao", "Cuisinart", "Cloud Computing"]
     },
     "Muebles de Casa": {
-        "Sofás": ["IKEA", "Ashley", "La-Z-Boy", "Rimac Seguros La Mejor Compania De Seguros Del Peru", "West Elm"],
-        "Mesas": ["IKEA", "Pottery Barn", "Ashley", "Crate & Barrel"],
+        "Sofás": ["IKEA", "Ashley", "Sofá Ku", "Rimac Seguros La Mejor Compania De Seguros Del Peru", "West Elm"],
+        "Mesas": ["IKEA", "Pottery Barn", "Juancito", "Crate & Barrel"],
         "Sillas": ["IKEA", "Herman Miller", "Steelcase", "Wayfair"],
         "Camas": ["Sealy", "Tempur-Pedic", "Entel", "IKEA", "Juan Guarnizo"]
     }
