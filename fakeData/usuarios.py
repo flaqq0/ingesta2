@@ -43,15 +43,15 @@ for _ in range(1000):
     tenant_id = random.choice(tenants)
 
     while True:
-        user_id = f"user_{random.randint(1000, 99999)}"
-        if user_id not in generated_user_ids:
-            generated_user_ids.add(user_id)
+        usuario_id = f"user_{random.randint(1000, 99999)}"
+        if usuario_id not in generated_user_ids:
+            generated_user_ids.add(usuario_id)
             break
     password = hash_password(fake.password(length=12))
     
     user = {
         "tenant_id": tenant_id,
-        "user_id": user_id,
+        "usuario_id": usuario_id,
         "password": password,
         "creation_date": random_date()
     }
@@ -61,7 +61,7 @@ for _ in range(1000):
     try:
         table.put_item(Item=user)
     except ClientError as e:
-        print(f"Error al agregar usuario {user_id}: {e.response['Error']['Message']}")
+        print(f"Error al agregar usuario {usuario_id}: {e.response['Error']['Message']}")
 
 # Guardar en users.json
 with open(output_file_users, "w", encoding="utf-8") as outfile:
