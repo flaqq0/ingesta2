@@ -1,5 +1,5 @@
 import os
-import json
+import csv
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 from loguru import logger
@@ -56,15 +56,15 @@ def ingest():
         logger.error(f"El directorio '{BASE_DIRECTORY}' no existe. Abortando ingesta.")
         return
 
-    file_path = os.path.join(BASE_DIRECTORY, "pf_productos.json")
+    file_path = os.path.join(BASE_DIRECTORY, "pf_productos.csv")
     if not os.path.isfile(file_path):
-        logger.warning(f"No se encontró el archivo 'pf_productos.json' en '{BASE_DIRECTORY}'. Nada para subir.")
+        logger.warning(f"No se encontró el archivo 'pf_productos.csv' en '{BASE_DIRECTORY}'. Nada para subir.")
         return
     
     file_size = os.path.getsize(file_path) / 1024 
     logger.info(f"Archivo '{file_path}' encontrado. Tamaño: {file_size:.2f} KB.")
 
-    s3_file_path = "productos/pf_productos.json"
+    s3_file_path = "productos/pf_productos.csv"
     try:
         logger.info(f"Subiendo archivo '{file_path}' al bucket S3 en la ruta '{s3_file_path}'.")
         upload_start_time = datetime.now()
