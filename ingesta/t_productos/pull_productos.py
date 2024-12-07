@@ -55,7 +55,7 @@ def export_table_to_csv_dynamodb(output_dir, table_name=TABLE_NAME):
         # Escribir los datos en formato CSV
         if all_items:
             with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csv_file:
-                writer = csv.DictWriter(csv_file, fieldnames=all_items[0].keys())
+                writer = csv.DictWriter(csv_file, fieldnames=all_items[0].keys(), delimiter=';')
                 writer.writeheader()
                 writer.writerows(all_items)
             logger.success(f"Exportación completada con éxito. Archivo guardado en {csv_file_path}. Total de registros exportados: {len(all_items)}")
