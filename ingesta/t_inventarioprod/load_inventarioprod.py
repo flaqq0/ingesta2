@@ -55,9 +55,9 @@ def ingest():
         logger.error(f"El directorio '{BASE_DIRECTORY}' no existe. Abortando ingesta.")
         return
 
-    file_path = os.path.join(BASE_DIRECTORY, "productos_inventarios.json")
+    file_path = os.path.join(BASE_DIRECTORY, "pf_inventarioprod.json")
     if not os.path.isfile(file_path):
-        logger.warning(f"No se encontró el archivo 'productos_inventarios.json' en '{BASE_DIRECTORY}'. Nada para subir.")
+        logger.warning(f"No se encontró el archivo 'pf_inventarioprod.json' en '{BASE_DIRECTORY}'. Nada para subir.")
         return
     
     file_size = os.path.getsize(file_path) / 1024  # Tamaño en KB
