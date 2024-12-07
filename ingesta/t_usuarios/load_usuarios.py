@@ -1,5 +1,4 @@
 import os
-import csv
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 from loguru import logger
@@ -14,9 +13,12 @@ logger.add(
     rotation="10 MB"
 )
 
-# Variables globales
-BASE_DIRECTORY = "./exported_data"
+# Configuración global
 BUCKET_NAME = "aproyecto-dev"
+BASE_DIRECTORY = "./exported_data"
+FILE_NAME = "pf_usuarios.csv"
+FILE_PATH = os.path.join(BASE_DIRECTORY, FILE_NAME)
+S3_FILE_PATH = f"usuarios/{FILE_NAME}"
 
 # Conexión a S3
 s3 = boto3.client("s3")
@@ -44,40 +46,25 @@ def upload_to_s3(file_path, bucket, s3_file_path):
         logger.error(f"Error desconocido al subir el archivo '{file_path}': {str(e)}")
 
 def ingest():
-    logger.info(f"Iniciando ingesta al bucket '{BUCKET_NAME}'.")
+    logger.info(f"Iniciando carga al bucket '{BUCKET_NAME}'.")
     if not check_bucket_exists(BUCKET_NAME):
-        logger.critical(f"El bucket '{BUCKET_NAME}' no está disponible. Abortando ingesta.")
+        logger.critical(f"El bucket '{BUCKET_NAME}' no está disponible. Abortando carga.")
         return
 
     start_time = datetime.now()
-    processed_files = 0
 
-    if not os.path.exists(BASE_DIRECTORY):
-        logger.error(f"El directorio '{BASE_DIRECTORY}' no existe. Abortando ingesta.")
-        return
-
-    file_path = os.path.join(BASE_DIRECTORY, "pf_usuarios.csv")
-    if not os.path.isfile(file_path):
-        logger.warning(f"No se encontró el archivo 'pf_usuarios.csv' en '{BASE_DIRECTORY}'. Nada para subir.")
+    if not os.path.exists(FILE_PATH):
+        logger.error(f"El archivo '{FILE_PATH}' no existe. Abortando carga.")
         return
     
-    file_size = os.path.getsize(file_path) / 1024  # Tamaño en KB
-    logger.info(f"Archivo '{file_path}' encontrado. Tamaño: {file_size:.2f} KB.")
-
-    s3_file_path = "usuarios/pf_usuarios.csv"
+    logger.info(f"Archivo encontrado: '{FILE_PATH}'")
     try:
-        logger.info(f"Subiendo archivo '{file_path}' al bucket S3 en la ruta '{s3_file_path}'.")
-        upload_start_time = datetime.now()
-        upload_to_s3(file_path, BUCKET_NAME, s3_file_path)
-        upload_end_time = datetime.now()
-        upload_duration = upload_end_time - upload_start_time
-        logger.info(f"Archivo '{file_path}' subido exitosamente en {upload_duration.seconds} segundos.")
-        processed_files += 1
+        upload_to_s3(FILE_PATH, BUCKET_NAME, S3_FILE_PATH)
     except Exception as e:
-        logger.error(f"Error durante el procesamiento del archivo '{file_path}': {str(e)}")
+        logger.error(f"Error durante la carga del archivo '{FILE_PATH}': {str(e)}")
+    finally:
+        end_time = datetime.now()
+        logger.success(f"Carga completada. Tiempo total: {end_time - start_time}")
 
-    end_time = datetime.now()
-    logger.success(f"Ingesta completada. Tiempo total: {end_time - start_time}. Archivos procesados: {processed_files}")
-
-# Llamada a la función principal
+# Llamar a la función principal
 ingest()
