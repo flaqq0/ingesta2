@@ -1,5 +1,5 @@
 import boto3
-import csv
+import json
 import os
 from loguru import logger
 from datetime import datetime
