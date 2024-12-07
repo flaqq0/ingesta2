@@ -76,11 +76,11 @@ for tenant_id in tenant_inventarios.keys():
     for inventario in inventarios_list:
         try:
             # Seleccionar 10 productos aleatorios del tenant_id
-            selected_products = random.sample(productos_list, k=10)
+            selected_products = random.sample(productos_list, k=20)
 
             for producto in selected_products:
                 # Generar stock aleatorio para el producto, respetando el stock del inventario
-                max_stock = inventario.get("stock", 0)
+                max_stock = inventario.get("stock", 1)
                 if max_stock == 0:
                     continue  # Saltar si el inventario no tiene stock disponible
                 stock = random.randint(1, max_stock)

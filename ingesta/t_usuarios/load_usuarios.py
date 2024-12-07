@@ -1,5 +1,5 @@
 import os
-import json
+import csv
 import boto3
 from botocore.exceptions import NoCredentialsError, ClientError
 from loguru import logger
@@ -13,15 +13,7 @@ logger.add(
     level="INFO",
     rotation="10 MB"
 )
-'''
-CUSTOM_DATE = "2024-11-30"
-logger.add(
-    LOG_FILE_PATH,
-    format=f"{CUSTOM_DATE} {{time:HH:mm:ss.SSS}} | {{level}} | {{message}}",
-    level="INFO",
-    rotation="10 MB"
-)
-'''
+
 # Variables globales
 BASE_DIRECTORY = "./exported_data"
 BUCKET_NAME = "aproyecto-dev"
@@ -64,15 +56,15 @@ def ingest():
         logger.error(f"El directorio '{BASE_DIRECTORY}' no existe. Abortando ingesta.")
         return
 
-    file_path = os.path.join(BASE_DIRECTORY, "pf_usuarios.json")
+    file_path = os.path.join(BASE_DIRECTORY, "pf_usuarios.csv")
     if not os.path.isfile(file_path):
-        logger.warning(f"No se encontró el archivo 'pf_usuarios.json' en '{BASE_DIRECTORY}'. Nada para subir.")
+        logger.warning(f"No se encontró el archivo 'pf_usuarios.csv' en '{BASE_DIRECTORY}'. Nada para subir.")
         return
     
     file_size = os.path.getsize(file_path) / 1024  # Tamaño en KB
     logger.info(f"Archivo '{file_path}' encontrado. Tamaño: {file_size:.2f} KB.")
 
-    s3_file_path = "usuarios/pf_usuarios.json"
+    s3_file_path = "usuarios/pf_usuarios.csv"
     try:
         logger.info(f"Subiendo archivo '{file_path}' al bucket S3 en la ruta '{s3_file_path}'.")
         upload_start_time = datetime.now()
